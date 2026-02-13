@@ -1,0 +1,12 @@
+SHORTCUT KEYS
+Keys	    Action
+N + B	    Add hotspot (room link)
+M + E	    Move hotspot
+N + E	    Change hotspot target room
+S + R	    Place remote switch
+M + D	    Exit / Cancel any mode
+S + Y	    Sync Home Assistant devices
+I + M + U	Create new scene (upload 360 image)
+I + M + R	Manage scenes (rename / delete)
+S + D	    Save design (download JSON)
+L + D	    Load design

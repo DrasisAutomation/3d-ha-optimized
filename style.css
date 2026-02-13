@@ -1,0 +1,1092 @@
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: black;
+  touch-action: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+}
+
+/* Hamburger button */
+.hamburger-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  color: white;
+  font-size: 24px;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s, opacity 0.3s;
+  opacity: 1;
+  pointer-events: auto;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hamburger-btn.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hamburger-btn:active {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(0.95);
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.95);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: 90;
+  overflow-y: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  -webkit-overflow-scrolling: touch;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-title {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.sidebar-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  touch-action: manipulation;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-close:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.scenes-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.scene-item {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scene-item:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.scene-item.active {
+  background: rgba(66, 165, 245, 0.2);
+  color: #42a5f5;
+  border-left: 3px solid #42a5f5;
+  padding-left: 17px;
+}
+
+.scene-name {
+  flex: 1;
+  font-size: 14px;
+}
+
+/* Modal styles */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 200;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.modal-overlay.show {
+  display: flex;
+}
+
+.modal {
+  background: #1e1e1e;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-header {
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 24px;
+  cursor: pointer;
+  touch-action: manipulation;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.modal-close:active {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.form-input,
+.form-file,
+.form-textarea {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  box-sizing: border-box;
+  touch-action: manipulation;
+}
+
+.form-input:focus,
+.form-file:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #42a5f5;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.form-file {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.form-textarea {
+  min-height: 80px;
+  resize: vertical;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.btn-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: #42a5f5;
+  color: white;
+}
+
+.btn-primary:active {
+  background: #2196F3;
+}
+
+.btn-primary:disabled {
+  background: rgba(66, 165, 245, 0.5);
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.btn-secondary:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-danger {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.btn-danger:active {
+  background: rgba(244, 67, 54, 0.3);
+}
+
+.btn-success {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+}
+
+.btn-success:active {
+  background: rgba(76, 175, 80, 0.3);
+}
+
+.btn-warning {
+  background: rgba(255, 193, 7, 0.2);
+  color: #FFC107;
+}
+
+.btn-warning:active {
+  background: rgba(255, 193, 7, 0.3);
+}
+
+.manage-scenes-list {
+  max-height: 400px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.manage-scene-item {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.manage-scene-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.manage-scene-name {
+  color: white;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.manage-scene-input {
+  width: 100%;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+}
+
+.manage-scene-input:focus {
+  outline: none;
+  border-color: #42a5f5;
+}
+
+.manage-scene-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-small {
+  padding: 8px 16px;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-small:active {
+  transform: scale(0.95);
+}
+
+.btn-small-rename {
+  background: rgba(66, 165, 245, 0.2);
+  color: #42a5f5;
+}
+
+.btn-small-rename:active {
+  background: rgba(66, 165, 245, 0.3);
+}
+
+.btn-small-delete {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.btn-small-delete:active {
+  background: rgba(244, 67, 54, 0.3);
+}
+
+.no-scenes-message {
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 20px;
+  font-size: 14px;
+}
+
+/* Scene selection popup */
+.scene-selection-popup {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.95);
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 280px;
+  width: 90%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scene-selection-popup.show {
+  display: flex;
+}
+
+.scene-selection-header {
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scene-selection-item {
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  border: 1px solid transparent;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scene-selection-item:active {
+  background: rgba(66, 165, 245, 0.2);
+  color: #42a5f5;
+  border-color: rgba(66, 165, 245, 0.3);
+}
+
+.scene-selection-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 18px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scene-selection-close:active {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* Scene selection indicator */
+.scene-selection-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(66, 165, 245, 0.2);
+  color: #42a5f5;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 100;
+  display: none;
+  border: 1px solid rgba(66, 165, 245, 0.3);
+  max-width: 300px;
+}
+
+.scene-selection-indicator.show {
+  display: block;
+}
+
+/* Remote Mode Indicator */
+.remote-mode-indicator {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 193, 7, 0.2);
+  color: #FFC107;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 100;
+  display: none;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  max-width: 90%;
+  text-align: center;
+}
+
+.remote-mode-indicator.show {
+  display: block;
+}
+
+/* Home Assistant Status Indicator */
+.ha-status-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 100;
+  display: none !important;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.ha-status-indicator.disconnected {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.ha-status-indicator.show {
+  align-items: center;
+  gap: 6px;
+}
+
+.ha-status-indicator i {
+  font-size: 14px;
+}
+
+/* REMOTE CONTAINER STYLES */
+.remote-container {
+  position: fixed;
+  z-index: 50;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  display: block;
+}
+
+.remote-main-button {
+  width: 60px;
+  height: 60px;
+  background-color: rgba(255, 255, 255, 0.556);
+  border: none;
+  border-radius: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+  touch-action: manipulation;
+}
+
+@media (max-width: 768px) {
+  .remote-main-button {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+.remote-main-button:active {
+  transform: scale(0.9);
+}
+
+.remote-main-button i {
+  font-size: 18px;
+  color: #333;
+}
+
+@media (max-width: 768px) {
+  .remote-main-button i {
+    font-size: 16px;
+  }
+}
+
+/* Yellow theme for main button */
+.remote-main-button.active-main {
+  box-shadow: 0 0 20px 8px rgba(255, 193, 7, 0.7);
+  border: 2px solid rgba(255, 193, 7, 0.4);
+}
+
+.remote-main-button.active-main i {
+  color: #FFC107;
+}
+
+/* REMOTE MODAL STYLES */
+/* Prevent text selection */
+.remote-container * {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.remote-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 2000;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.remote-modal.show {
+  display: flex;
+}
+
+.remote-modal-content {
+  background-color: rgba(255, 255, 255, 0.429);
+  padding: 24px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  min-width: 290px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 2001;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .remote-modal-content {
+    padding: 20px;
+    max-height: 90vh;
+    min-width: 290px;
+    border-radius: 12px;
+  }
+}
+
+.remote-modal-title {
+  text-align: center;
+  margin-bottom: 24px;
+  color: #333;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .remote-modal-title {
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+}
+
+.remote-switch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .remote-switch-grid {
+    gap: 16px;
+  }
+}
+
+.remote-switch-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.remote-switch-button {
+  background-color: rgba(255, 255, 255, 0.378) !important;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.15s ease;
+  width: 70px;
+  height: 70px;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  -webkit-appearance: none;
+}
+
+@media (max-width: 768px) {
+  .remote-switch-button {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+.remote-switch-button:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+.remote-switch-button i {
+  font-size: 20px;
+  color: #333;
+  transition: color 0.15s;
+}
+
+@media (max-width: 768px) {
+  .remote-switch-button i {
+    font-size: 18px;
+  }
+}
+
+/* ACTIVE STATE - YELLOW GLOW & ICON */
+.remote-switch-button.active i {
+  color: #FFC107 !important;
+}
+
+.remote-switch-button.active {
+  box-shadow: 0 0 20px 10px rgba(255, 193, 7, 0.8), 
+              0 4px 8px rgba(0, 0, 0, 0.15);
+  border: 2px solid rgba(255, 193, 7, 0.5);
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+/* INACTIVE STATE - NO GLOW, BLACK ICON */
+.remote-switch-button:not(.active) i {
+  color: #333 !important;
+}
+
+.remote-switch-button:not(.active) {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border: 2px solid transparent;
+  background-color: white;
+}
+
+.remote-switch-label {
+  font-size: 13px;
+  color: #666;
+  text-align: center;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .remote-switch-label {
+    font-size: 12px;
+  }
+}
+
+.remote-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #333;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  z-index: 2002;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 768px) {
+  .remote-close-btn {
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+}
+
+.remote-close-btn:active {
+  background-color: #f0f0f0;
+}
+
+/* Edit Modal Styles */
+.remote-edit-modal {
+  display: none;
+}
+
+.remote-edit-modal.show {
+  display: flex;
+}
+
+.remote-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.remote-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.remote-form-label {
+  font-size: 15px;
+  color: #333;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .remote-form-label {
+    font-size: 14px;
+  }
+}
+
+.remote-form-input {
+  padding: 14px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  width: 100%;
+  touch-action: manipulation;
+  background-color: white;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .remote-form-input {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+.remote-form-input:focus {
+  outline: none;
+  border-color: #FFC107;
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.3);
+}
+
+.remote-form-note {
+  font-size: 13px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* Fix for input field click area */
+.remote-form-group::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.remote-form-input-wrapper {
+  position: relative;
+  z-index: 1;
+}
+
+/* Icon Selection Styles */
+.remote-icon-selection {
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 240px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .remote-icon-selection {
+    max-height: 200px;
+    padding: 12px;
+  }
+}
+
+.remote-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .remote-icon-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+}
+
+.remote-icon-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .remote-icon-option {
+    padding: 10px 6px;
+  }
+}
+
+.remote-icon-option:active {
+  background-color: #f5f5f5;
+  transform: scale(0.95);
+}
+
+.remote-icon-option.selected {
+  border-color: #FFC107;
+  background-color: rgba(255, 193, 7, 0.08);
+  box-shadow: 0 0 12px rgba(255, 193, 7, 0.4);
+}
+
+.remote-icon-option i {
+  font-size: 28px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .remote-icon-option i {
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+}
+
+.remote-icon-name {
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+  word-break: break-all;
+  line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+  .remote-icon-name {
+    font-size: 10px;
+  }
+}
+
+.remote-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .remote-form-actions {
+    margin-top: 16px;
+  }
+}
+
+.remote-form-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.2s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 100px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .remote-form-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    min-width: 80px;
+  }
+}
+
+.remote-form-btn:active {
+  opacity: 0.9;
+  transform: translateY(2px);
+}
+
+.remote-form-btn.save {
+  background-color: #FFC107;
+  color: #333;
+}
+
+.remote-form-btn.save:active {
+  background-color: #FFB300;
+  box-shadow: 0 0 12px rgba(255, 193, 7, 0.6);
+}
+
+.remote-form-btn.cancel {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.remote-form-btn.cancel:active {
+  background-color: #e0e0e0;
+}
+
+/* Canvas styling */
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  touch-action: none;
+}
+
+/* Hide main button when modal is open - WORKING SOLUTION */
+/* Using :has() selector for modern browsers */
+.remote-container:has(.remote-modal.show) .remote-main-button,
+.remote-container:has(.remote-edit-modal.show) .remote-main-button {
+  display: none !important;
+}
+
+/* Fallback for browsers that don't support :has() */
+.remote-container .remote-modal.show ~ .remote-main-button,
+.remote-container .remote-edit-modal.show ~ .remote-main-button {
+  display: none !important;
+}
+
+/* Show main button when NO modal is shown */
+.remote-container .remote-main-button {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Alternative: Add a specific class when modal is open */
+.remote-modal-open .remote-main-button {
+  display: none !important;
+}
+
+.remote-modal.show {
+  background-color: transparent;
+}

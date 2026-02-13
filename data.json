@@ -1,0 +1,297 @@
+
+{
+  "scenes": {
+    "scene1": {
+      "image": "360.webp",
+      "name": "Experience Room",
+      "hotspots": [
+        {
+          "x": 328.44039371038406,
+          "y": -28.184980172637275,
+          "z": -375.1395929599893,
+          "target": "scene2"
+        }
+      ]
+    },
+    "scene2": {
+      "image": "360-1.webp",
+      "name": "Pantry",
+      "hotspots": [
+        {
+          "x": -452.9067255602092,
+          "y": -35.60261587152535,
+          "z": 207.12616448185491,
+          "target": "scene1768371535644"
+        },
+        {
+          "x": -316.1756969691506,
+          "y": -32.87951939738918,
+          "z": -385.74797096478346,
+          "target": "scene1768371465922"
+        },
+        {
+          "x": -215.98611619601974,
+          "y": -35.85884107853067,
+          "z": 448.6953975953096,
+          "target": "scene1"
+        }
+      ]
+    },
+    "scene1768371465922": {
+      "image": "360-2.webp",
+      "name": "Lobby",
+      "hotspots": [
+        {
+          "x": 471.9216876929943,
+          "y": -135.6441595112368,
+          "z": -93.40468802340563,
+          "target": "scene1768371497399"
+        },
+        {
+          "x": 197.04296576996225,
+          "y": 9.73099518205043,
+          "z": 458.9793345878476,
+          "target": "scene2"
+        }
+      ]
+    },
+    "scene1768371497399": {
+      "image": "360-3.webp",
+      "name": "Showroom",
+      "hotspots": [
+        {
+          "x": 468.868492371379,
+          "y": -131.4211314426854,
+          "z": -110.58239677191048,
+          "target": "scene1768371465922"
+        }
+      ]
+    },
+    "scene1768371535644": {
+      "image": "360-4.webp",
+      "name": "Tremblay HT",
+      "hotspots": [
+        {
+          "x": 484.5831204171969,
+          "y": -63.600025387540775,
+          "z": 103.44342934178574,
+          "target": "scene2"
+        },
+        {
+          "x": 243.9940512493419,
+          "y": -32.62732248045222,
+          "z": 434.591863464467,
+          "target": "scene1768371566300"
+        }
+      ]
+    },
+    "scene1768371566300": {
+      "image": "360-5.webp",
+      "name": "Inwall HT",
+      "hotspots": [
+        {
+          "x": -22.580369481917938,
+          "y": -69.93525087949587,
+          "z": -493.9019976737845,
+          "target": "scene1768371535644"
+        }
+      ]
+    }
+  },
+  "remotes": [
+    {
+      "id": "remote-1",
+      "position": [
+        -234.86753478075696,
+        38.27683413033839,
+        -439.56808635416434
+      ],
+      "targetScene": "scene1768371566300",
+      "switches": [
+        {
+          "name": "Row 3",
+          "icon": "fas fa-lightbulb",
+          "entityId": "light.row_3",
+          "active": true
+        },
+        {
+          "name": "Row 1&2",
+          "icon": "fas fa-lightbulb",
+          "entityId": "light.row_1_2",
+          "active": false
+        },
+        {
+          "name": "Row 4",
+          "icon": "fas fa-power-off",
+          "entityId": "light.row_4",
+          "active": false
+        },
+        {
+          "name": "Row 5",
+          "icon": "fas fa-plug",
+          "entityId": "light.row_5",
+          "active": true
+        },
+        {
+          "name": "Strip",
+          "icon": "fas fa-desktop",
+          "entityId": "light.strip_light",
+          "active": true
+        },
+        {
+          "name": "Switch 6",
+          "icon": "fas fa-fan",
+          "entityId": "switch.node_89",
+          "active": false
+        }
+      ]
+    },
+    {
+      "id": "remote-2",
+      "position": [
+        465.23658416800043,
+        -54.87273713403389,
+        172.84533296202034
+      ],
+      "targetScene": "scene1768371535644",
+      "switches": [
+        {
+          "name": "Switch 1",
+          "icon": "fas fa-sliders-h",
+          "entityId": "switch.node_89",
+          "active": true
+        },
+        {
+          "name": "Switch 2",
+          "icon": "fas fa-lightbulb",
+          "entityId": "switch.node_89_2",
+          "active": true
+        },
+        {
+          "name": "Switch 3",
+          "icon": "fas fa-power-off",
+          "entityId": "switch.node_89_3",
+          "active": true
+        },
+        {
+          "name": "Switch 4",
+          "icon": "fas fa-plug",
+          "entityId": "switch.node_89_4",
+          "active": true
+        },
+        {
+          "name": "Switch 5",
+          "icon": "fas fa-tv",
+          "entityId": "switch.ht_2",
+          "active": true
+        },
+        {
+          "name": "Switch 6",
+          "icon": "fas fa-fan",
+          "entityId": "switch.ht_2_2",
+          "active": true
+        }
+      ]
+    },
+    {
+      "id": "remote-3",
+      "position": [
+        119.80064730132116,
+        98.7724332791147,
+        -474.64191440637103
+      ],
+      "targetScene": "scene2",
+      "switches": [
+        {
+          "name": "Fan",
+          "icon": "fas fa-fan",
+          "entityId": "switch.pantry_r2_2",
+          "active": false
+        },
+        {
+          "name": "cove",
+          "icon": "fas fa-lightbulb",
+          "entityId": "switch.pantry_r5",
+          "active": true
+        },
+        {
+          "name": "Switch 3",
+          "icon": "fas fa-power-off",
+          "entityId": "switch.pantry_r3",
+          "active": false
+        },
+        {
+          "name": "Switch 4",
+          "icon": "fas fa-plug",
+          "entityId": "light.pantry_light1",
+          "active": false
+        },
+        {
+          "name": "Switch 5",
+          "icon": "fas fa-tv",
+          "entityId": "light.pantry_light2",
+          "active": false
+        },
+        {
+          "name": "Switch 6",
+          "icon": "fas fa-fan",
+          "entityId": "light.pantry_light3",
+          "active": false
+        }
+      ]
+    },
+    {
+      "id": "remote-4",
+      "position": [
+        393.4892016615716,
+        3.436397412154828,
+        -307.638404785433
+      ],
+      "targetScene": "scene1",
+      "switches": [
+        {
+          "name": "chandlie",
+          "icon": "fas fa-sliders-h",
+          "entityId": "switch.exp_room_r4",
+          "active": false
+        },
+        {
+          "name": "panel",
+          "icon": "fas fa-lightbulb",
+          "entityId": "switch.exp_room_r4_2",
+          "active": false
+        },
+        {
+          "name": "cove",
+          "icon": "fas fa-lightbulb",
+          "entityId": "switch.exproom_lumi_2ch_r4_2",
+          "active": false
+        },
+        {
+          "name": "Switch 4",
+          "icon": "fas fa-lightbulb",
+          "entityId": "switch.exproom_lumi_2ch_r4",
+          "active": false
+        },
+        {
+          "name": "spot",
+          "icon": "fas fa-tv",
+          "entityId": "light.exp_room_light_2_light",
+          "active": true
+        },
+        {
+          "name": "Switch 6",
+          "icon": "fas fa-fan",
+          "entityId": "light.exp_room_light3_light",
+          "active": false
+        }
+      ]
+    }
+  ],
+  "currentScene": "scene1",
+  "haConfig": {
+    "url": "https://demo.lumihomepro1.com",
+    "connected": true,
+    "socketState": 1
+  }
+}
