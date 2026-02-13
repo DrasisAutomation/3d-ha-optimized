@@ -100,8 +100,7 @@
     </div>
   </div>
 </div>
-
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="three.min.js"></script>
 <script src="remote.js"></script>
 <script>
 /* ================== SCENE DATA ================== */
@@ -139,7 +138,7 @@ const renderer = new THREE.WebGLRenderer({
   powerPreference: "high-performance"
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // OPTIMIZED: Cap pixel ratio
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.LinearToneMapping;
 renderer.toneMappingExposure = 2;
@@ -151,6 +150,9 @@ const geometry = new THREE.SphereGeometry(500, 64, 64);
 geometry.scale(-1, 1, 1);
 
 const loader = new THREE.TextureLoader();
+
+// OPTIMIZATION: Texture cache
+const textureCache = new Map();
 
 function createSphere(opacity) {
   return new THREE.Mesh(
@@ -183,7 +185,6 @@ loader.load("icon.png", (texture) => {
   createHotspots(currentScene);
 }, undefined, (err) => {
   console.error('Failed to load hotspot icon:', err);
-  // Create a placeholder if icon fails to load
   hotspotIcon = new THREE.CanvasTexture(createPlaceholderIcon());
   createHotspots(currentScene);
 });
@@ -193,26 +194,40 @@ function createPlaceholderIcon() {
   canvas.width = 64;
   canvas.height = 64;
   const ctx = canvas.getContext('2d');
-  
-  // Draw a simple circle
   ctx.fillStyle = '#42a5f5';
   ctx.beginPath();
   ctx.arc(32, 32, 24, 0, Math.PI * 2);
   ctx.fill();
-  
   ctx.fillStyle = 'white';
   ctx.font = 'bold 20px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('?', 32, 32);
-  
   return canvas;
 }
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-/* ================== LOAD SCENE (CROSS FADE) ================== */
+// OPTIMIZATION: Preload all scenes
+function preloadAllScenes() {
+  Object.keys(SCENES).forEach(sceneKey => {
+    if (!textureCache.has(sceneKey) && SCENES[sceneKey].image) {
+      loader.load(SCENES[sceneKey].image, tex => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        textureCache.set(sceneKey, tex);
+        console.log(`Preloaded: ${sceneKey}`);
+      }, undefined, (err) => {
+        console.warn(`Failed to preload ${sceneKey}:`, err);
+      });
+    }
+  });
+}
+
+/* ================== LOAD SCENE (OPTIMIZED CROSS FADE) ================== */
+
+let isTransitioning = false;
+let pendingSceneLoad = null;
 
 function loadScene(sceneKey) {
   if (!SCENES[sceneKey] || !SCENES[sceneKey].image) {
@@ -220,18 +235,26 @@ function loadScene(sceneKey) {
     return;
   }
   
-  loader.load(SCENES[sceneKey].image, tex => {
-    tex.colorSpace = THREE.SRGBColorSpace;
-
+  // Prevent multiple simultaneous transitions
+  if (isTransitioning) {
+    pendingSceneLoad = sceneKey;
+    console.log('Transition in progress, queueing:', sceneKey);
+    return;
+  }
+  
+  isTransitioning = true;
+  pendingSceneLoad = null;
+  
+  // OPTIMIZATION: Use cached texture
+  const applyTexture = (tex) => {
     inactiveSphere.material.map = tex;
     inactiveSphere.material.opacity = 0;
     inactiveSphere.material.needsUpdate = true;
 
     let t = 0;
-
     function fade() {
-      t += 0.02;
-
+      t += 0.04; // OPTIMIZATION: Faster fade
+      
       inactiveSphere.material.opacity = t;
       activeSphere.material.opacity = 1 - t;
 
@@ -250,14 +273,36 @@ function loadScene(sceneKey) {
         createHotspots(sceneKey);
         updateRemoteVisibility();
         updateScenesList();
+        
+        isTransitioning = false;
+        
+        // Process queued navigation
+        if (pendingSceneLoad) {
+          console.log('Processing queued scene:', pendingSceneLoad);
+          loadScene(pendingSceneLoad);
+        }
       }
     }
-
     fade();
-  }, undefined, (err) => {
-    console.error('Failed to load scene image:', err);
-    alert('Failed to load scene image. Please check the image URL.');
-  });
+  };
+
+  // Use cached texture if available
+  if (textureCache.has(sceneKey)) {
+    const tex = textureCache.get(sceneKey);
+    console.log(`Using cached texture for: ${sceneKey}`);
+    applyTexture(tex);
+  } else {
+    console.log(`Loading texture for: ${sceneKey}`);
+    loader.load(SCENES[sceneKey].image, tex => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      textureCache.set(sceneKey, tex);
+      applyTexture(tex);
+    }, undefined, (err) => {
+      console.error('Failed to load scene image:', err);
+      alert('Failed to load scene image. Please check the image URL.');
+      isTransitioning = false;
+    });
+  }
 }
 
 /* ================== HOTSPOT FUNCTIONS ================== */
@@ -359,17 +404,13 @@ function updateRemoteModeIndicator() {
 function handleRemotePlacement(point) {
   if (!remoteMode) return;
   
-  // Create remote at clicked position
   RemoteModule.createRemote(point, remoteTargetScene || currentScene);
-  
   console.log(`Remote placed at position: ${JSON.stringify(point.toArray())}`);
   
-  // Exit remote mode after placement
   remoteMode = false;
   updateRemoteModeIndicator();
 }
 
-// Save design with remotes
 function saveDesignWithRemotes() {
   const designData = {
     scenes: SCENES,
@@ -390,7 +431,6 @@ function saveDesignWithRemotes() {
   URL.revokeObjectURL(url);
 }
 
-// Load design with remotes
 function loadDesignWithRemotes() {
   const designFile = document.getElementById('designFile').files[0];
   
@@ -404,7 +444,6 @@ function loadDesignWithRemotes() {
     try {
       const loadedData = JSON.parse(e.target.result);
       
-      // Load scenes
       if (loadedData.scenes) {
         let isValid = true;
         for (let key in loadedData.scenes) {
@@ -422,10 +461,13 @@ function loadDesignWithRemotes() {
         SCENES = loadedData.scenes;
         currentScene = loadedData.currentScene || Object.keys(SCENES)[0];
         updateScenesList();
+        
+        // OPTIMIZATION: Clear and repopulate texture cache
+        textureCache.clear();
+        preloadAllScenes();
         loadScene(currentScene);
       }
       
-      // Load remotes
       if (loadedData.remotes && Array.isArray(loadedData.remotes)) {
         RemoteModule.loadRemotes(loadedData.remotes);
         RemoteModule.updateRemoteVisibility(currentScene);
@@ -453,10 +495,8 @@ function openSceneSelectionPopup(hotspotMesh) {
   const popup = document.getElementById('sceneSelectionPopup');
   const list = document.getElementById('sceneSelectionList');
   
-  // Clear previous list
   list.innerHTML = '';
   
-  // Add all scenes except current one
   Object.keys(SCENES).forEach(sceneKey => {
     if (sceneKey !== currentScene) {
       const item = document.createElement('div');
@@ -479,7 +519,6 @@ function openSceneSelectionPopup(hotspotMesh) {
     }
   });
   
-  // Position the popup near the center
   popup.style.left = '50%';
   popup.style.top = '50%';
   popup.style.transform = 'translate(-50%, -50%)';
@@ -503,7 +542,6 @@ function updateHotspotTarget(targetScene) {
       
       console.log(`Hotspot target updated to: ${SCENES[targetScene].name}`);
       
-      // Show brief confirmation
       const item = document.querySelector(`[data-scene-key="${targetScene}"]`);
       if (item) {
         item.style.background = 'rgba(76, 175, 80, 0.2)';
@@ -533,7 +571,6 @@ function updateScenesList() {
   const scenesList = document.getElementById('scenesList');
   scenesList.innerHTML = '';
   
-  // Add scene items
   Object.keys(SCENES).forEach(sceneKey => {
     const li = document.createElement('li');
     li.className = `scene-item ${sceneKey === currentScene ? 'active' : ''}`;
@@ -655,9 +692,16 @@ function handleManageAction(e) {
       e.target.textContent = 'Rename';
       e.target.dataset.action = 'rename';
       updateScenesList();
+      
+      // OPTIMIZATION: Clear and reload texture cache for this scene if needed
+      if (textureCache.has(sceneKey)) {
+        // Keep texture, just update name
+      }
     }
   } else if (action === 'delete') {
     if (confirm(`Are you sure you want to delete "${SCENES[sceneKey].name}"?`)) {
+      // OPTIMIZATION: Remove from cache
+      textureCache.delete(sceneKey);
       delete SCENES[sceneKey];
       
       if (currentScene === sceneKey) {
@@ -692,14 +736,19 @@ function createNewScene() {
     
     updateScenesList();
     closeCreateSceneModal();
-    loadScene(sceneKey);
+    
+    // OPTIMIZATION: Preload new scene
+    loader.load(e.target.result, tex => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      textureCache.set(sceneKey, tex);
+      loadScene(sceneKey);
+    });
   };
   reader.readAsDataURL(imageFile);
 }
 
 /* ================== EVENT LISTENERS FOR MODALS ================== */
 
-/* Hamburger button with touch support */
 document.getElementById('hamburgerBtn').addEventListener('click', (e) => {
   e.preventDefault();
   const sidebar = document.getElementById('sidebar');
@@ -782,7 +831,6 @@ document.getElementById('sceneSelectionClose').addEventListener('touchend', (e) 
   closeSceneSelectionPopup();
 });
 
-// Close popup when clicking outside
 document.addEventListener('mousedown', (e) => {
   const popup = document.getElementById('sceneSelectionPopup');
   if (popup.classList.contains('show') && 
@@ -809,7 +857,6 @@ const keys = new Set();
 document.addEventListener("keydown", e => {
   keys.add(e.key.toLowerCase());
 
-  // Remote placement mode - s + r
   if (keys.has("s") && keys.has("r")) {
     if (!remoteMode) {
       remoteMode = true;
@@ -822,7 +869,6 @@ document.addEventListener("keydown", e => {
     updateSceneSelectionIndicator();
   }
   
-  // Deactivate remote mode with m + d (same as other modes)
   if (keys.has("m") && keys.has("d")) {
     if (remoteMode) {
       remoteMode = false;
@@ -837,7 +883,6 @@ document.addEventListener("keydown", e => {
     mode = "view";
   }
   
-  // Scene selection mode activation - n + e together (TOGGLE)
   if (keys.has("n") && keys.has("e")) {
     if (!sceneSelectionMode && !remoteMode) {
       sceneSelectionMode = true;
@@ -847,7 +892,6 @@ document.addEventListener("keydown", e => {
     }
   }
   
-  // Existing mode controls (deactivate other modes when entering new mode)
   if (keys.has("n") && keys.has("b")) {
     sceneSelectionMode = false;
     updateSceneSelectionIndicator();
@@ -883,7 +927,6 @@ document.addEventListener("keydown", e => {
     openLoadDesignModal();
   }
   
-  // Sync with Home Assistant - s + y
   if (keys.has("s") && keys.has("y")) {
     e.preventDefault();
     RemoteModule.syncWithHA().then(result => {
@@ -908,6 +951,7 @@ let isTouch = false;
 let startX = 0, startY = 0;
 let selectedHotspot = null;
 let hotspotMoveStartPosition = null;
+let clickTimeout = null; // OPTIMIZATION: Debounce clicks
 
 function getClientCoordinates(event) {
   if (event.touches && event.touches.length > 0) {
@@ -948,7 +992,6 @@ function handlePointerStart(e) {
   
   setMouseFromEvent(e);
 
-  // Check for remote placement
   if (remoteMode) {
     const hit = raycaster.intersectObject(activeSphere);
     if (hit.length) {
@@ -958,7 +1001,6 @@ function handlePointerStart(e) {
     }
   }
 
-  // Check if we're in scene selection mode
   if (sceneSelectionMode) {
     const hit = raycaster.intersectObjects(hotspotMeshes);
     if (hit.length) {
@@ -971,7 +1013,24 @@ function handlePointerStart(e) {
   if (mode === "view" && !sceneSelectionMode) {
     const hit = raycaster.intersectObjects(hotspotMeshes);
     if (hit.length) {
-      loadScene(hit[0].object.userData.target);
+      // Clear any pending navigation
+      if (clickTimeout) {
+        clearTimeout(clickTimeout);
+        clickTimeout = null;
+      }
+      
+      // Immediate visual feedback
+      hit[0].object.material.opacity = 0.5;
+      
+      // Small delay to show feedback, but faster than before
+      clickTimeout = setTimeout(() => {
+        loadScene(hit[0].object.userData.target);
+        // Reset opacity after navigation starts
+        setTimeout(() => {
+          hit[0].object.material.opacity = 0.9;
+        }, 200);
+      }, 50);
+      
       isDown = false;
       return;
     }
@@ -1044,17 +1103,14 @@ function handlePointerEnd(e) {
   isTouch = false;
 }
 
-// Mouse events
 document.addEventListener("mousedown", handlePointerStart);
 document.addEventListener("mousemove", handlePointerMove);
 document.addEventListener("mouseup", handlePointerEnd);
 
-// Touch events - use passive: false for better control
 document.addEventListener("touchstart", handlePointerStart, { passive: false });
 document.addEventListener("touchmove", handlePointerMove, { passive: false });
 document.addEventListener("touchend", handlePointerEnd, { passive: false });
 
-// Prevent context menu
 document.addEventListener("contextmenu", e => e.preventDefault());
 
 /* ================== CAMERA ================== */
@@ -1076,7 +1132,6 @@ function animate() {
 
   hotspotMeshes.forEach(h => h.lookAt(camera.position));
   
-  // UPDATE REMOTE POSITIONS EVERY FRAME
   RemoteModule.updateRemotePositions(camera);
   
   renderer.render(scene, camera);
@@ -1084,21 +1139,76 @@ function animate() {
 
 /* ================== INIT ================== */
 
-// Load initial scene
-if (SCENES[currentScene] && SCENES[currentScene].image) {
-  loader.load(SCENES[currentScene].image, tex => {
-    tex.colorSpace = THREE.SRGBColorSpace;
-    activeSphere.material.map = tex;
-    activeSphere.material.needsUpdate = true;
-  }, undefined, (err) => {
-    console.error('Failed to load initial scene:', err);
-  });
+function autoLoadData() {
+  console.log('Auto-loading data.json on startup...');
+  
+  fetch('data.json')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('data.json not found');
+      }
+      return response.json();
+    })
+    .then(loadedData => {
+      if (loadedData.scenes) {
+        let isValid = true;
+        for (let key in loadedData.scenes) {
+          if (!loadedData.scenes[key].image || !loadedData.scenes[key].name || !Array.isArray(loadedData.scenes[key].hotspots)) {
+            isValid = false;
+            break;
+          }
+        }
+        
+        if (!isValid) {
+          console.warn('Invalid data.json format, using default scenes');
+        } else {
+          SCENES = loadedData.scenes;
+          currentScene = loadedData.currentScene || Object.keys(SCENES)[0];
+          updateScenesList();
+        }
+      }
+      
+      if (loadedData.remotes && Array.isArray(loadedData.remotes)) {
+        RemoteModule.loadRemotes(loadedData.remotes);
+        RemoteModule.updateRemoteVisibility(currentScene);
+      }
+      
+      // OPTIMIZATION: Preload all scenes after loading
+      preloadAllScenes();
+      loadInitialScene();
+    })
+    .catch(error => {
+      console.warn('Could not load data.json:', error.message, '- Using default scenes');
+      preloadAllScenes();
+      loadInitialScene();
+    });
 }
 
-// Set initial scene in remote module
-RemoteModule.setCurrentScene(currentScene);
+function loadInitialScene() {
+  if (SCENES[currentScene] && SCENES[currentScene].image) {
+    if (textureCache.has(currentScene)) {
+      const tex = textureCache.get(currentScene);
+      activeSphere.material.map = tex;
+      activeSphere.material.needsUpdate = true;
+      createHotspots(currentScene);
+    } else {
+      loader.load(SCENES[currentScene].image, tex => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        textureCache.set(currentScene, tex);
+        activeSphere.material.map = tex;
+        activeSphere.material.needsUpdate = true;
+        createHotspots(currentScene);
+      }, undefined, (err) => {
+        console.error('Failed to load initial scene:', err);
+      });
+    }
+  }
+  
+  RemoteModule.setCurrentScene(currentScene);
+  updateScenesList();
+  animate();
+}
 
-// Auto-connect to Home Assistant on load
 (async function initHomeAssistant() {
   console.log('Auto-connecting to Home Assistant...');
   updateHAStatus();
@@ -1107,7 +1217,6 @@ RemoteModule.setCurrentScene(currentScene);
   
   if (haResult.success) {
     console.log('Home Assistant connected successfully');
-    // Auto-sync switches after connection
     setTimeout(() => {
       RemoteModule.syncWithHA();
     }, 2000);
@@ -1116,8 +1225,8 @@ RemoteModule.setCurrentScene(currentScene);
   }
 })();
 
-updateScenesList();
-animate();
+// Start the auto-load process
+autoLoadData();
 
 /* ================== RESIZE ================== */
 
@@ -1125,10 +1234,9 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
 
-// Close remote modal when clicking outside
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.remote-modal-content') && 
       !e.target.closest('.remote-main-button') &&
@@ -1149,7 +1257,6 @@ document.addEventListener('touchend', (e) => {
   }
 });
 
-// Prevent zoom on mobile
 document.addEventListener('gesturestart', function(e) {
   e.preventDefault();
 });
@@ -1158,14 +1265,10 @@ document.addEventListener('dblclick', function(e) {
   e.preventDefault();
 }, { passive: false });
 
-// Handle device orientation if supported
 if (window.DeviceOrientationEvent) {
-  window.addEventListener('deviceorientation', function(e) {
-    // Optional: Add device orientation support here
-  });
+  window.addEventListener('deviceorientation', function(e) {});
 }
 
-// Auto-sync with Home Assistant every 30 seconds
 setInterval(() => {
   const haConfig = RemoteModule.getHAConfig();
   if (haConfig.connected) {
@@ -1173,12 +1276,9 @@ setInterval(() => {
   }
 }, 30000);
 
-// Update HA status periodically
 setInterval(updateHAStatus, 2000);
 
-// Add this to ensure main button hides when modal opens
 document.addEventListener('DOMContentLoaded', function() {
-  // Watch for modal open/close
   function updateRemoteButtons() {
     document.querySelectorAll('.remote-container').forEach(container => {
       const mainButton = container.querySelector('.remote-main-button');
@@ -1197,14 +1297,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Run on page load
   updateRemoteButtons();
-  
-  // Run on any click
   document.addEventListener('click', updateRemoteButtons);
   document.addEventListener('touchend', updateRemoteButtons);
-  
-  // Run periodically
   setInterval(updateRemoteButtons, 100);
 });
 </script>
