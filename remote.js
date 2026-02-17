@@ -95,7 +95,7 @@ const RemoteModule = (() => {
   let currentRemoteId = null;
   let currentScene = 'scene1';
   let activeControlIndex = -1;
-  
+
   // ========== HOME ASSISTANT CONFIGURATION ==========
   const HA_CONFIG = {
     url: "https://demo.lumihomepro1.com",
@@ -134,23 +134,23 @@ const RemoteModule = (() => {
 
     const wsUrl = convertToWebSocketUrl(HA_CONFIG.url);
     console.log('Connecting to Home Assistant WebSocket:', wsUrl);
-    
+
     try {
       HA_CONFIG.socket = new WebSocket(wsUrl);
-      
+
       HA_CONFIG.socket.onopen = () => {
         console.log('WebSocket connected to Home Assistant');
         HA_CONFIG.reconnectAttempts = 0;
-        
+
         // Send authentication message
         const authMessage = {
           type: 'auth',
           access_token: HA_CONFIG.token
         };
-        
+
         HA_CONFIG.socket.send(JSON.stringify(authMessage));
       };
-      
+
       HA_CONFIG.socket.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
@@ -159,31 +159,31 @@ const RemoteModule = (() => {
           console.error('Error parsing WebSocket message:', error);
         }
       };
-      
+
       HA_CONFIG.socket.onerror = (error) => {
         console.error('WebSocket error:', error);
         HA_CONFIG.connected = false;
       };
-      
+
       HA_CONFIG.socket.onclose = (event) => {
         console.log('WebSocket disconnected:', event.code, event.reason);
         HA_CONFIG.connected = false;
         updateAllSwitchStates(false);
-        
+
         // Clear pending requests
         HA_CONFIG.pendingRequests.forEach((request, id) => {
           request.reject(new Error('WebSocket closed'));
         });
         HA_CONFIG.pendingRequests.clear();
-        
+
         // Attempt to reconnect
         if (HA_CONFIG.autoReconnect && HA_CONFIG.reconnectAttempts < HA_CONFIG.maxReconnectAttempts) {
           HA_CONFIG.reconnectAttempts++;
-          console.log(`Reconnecting attempt ${HA_CONFIG.reconnectAttempts} in ${HA_CONFIG.reconnectInterval/1000} seconds...`);
+          console.log(`Reconnecting attempt ${HA_CONFIG.reconnectAttempts} in ${HA_CONFIG.reconnectInterval / 1000} seconds...`);
           setTimeout(initWebSocket, HA_CONFIG.reconnectInterval);
         }
       };
-      
+
     } catch (error) {
       console.error('Error creating WebSocket:', error);
       HA_CONFIG.connected = false;
@@ -201,18 +201,18 @@ const RemoteModule = (() => {
         };
         HA_CONFIG.socket.send(JSON.stringify(authMessage));
         break;
-        
+
       case 'auth_ok':
         console.log('Authentication successful');
         HA_CONFIG.connected = true;
         HA_CONFIG.reconnectAttempts = 0;
-        
+
         // Get initial states
         HA_CONFIG.socket.send(JSON.stringify({
           id: HA_CONFIG.messageId++,
           type: 'get_states'
         }));
-        
+
         // Subscribe to state changes
         HA_CONFIG.socket.send(JSON.stringify({
           id: HA_CONFIG.messageId++,
@@ -220,13 +220,13 @@ const RemoteModule = (() => {
           event_type: 'state_changed'
         }));
         break;
-        
+
       case 'auth_invalid':
         console.error('Authentication failed:', message.message);
         HA_CONFIG.connected = false;
         HA_CONFIG.socket.close();
         break;
-        
+
       case 'result':
         if (message.id === 1) { // get_states response
           if (message.result) {
@@ -234,7 +234,7 @@ const RemoteModule = (() => {
             updateSwitchesFromHA();
           }
         }
-        
+
         // Handle command results
         const pendingRequest = HA_CONFIG.pendingRequests.get(message.id);
         if (pendingRequest) {
@@ -246,14 +246,14 @@ const RemoteModule = (() => {
           }
         }
         break;
-        
+
       case 'event':
         if (message.event && message.event.event_type === 'state_changed') {
           const { entity_id, new_state } = message.event.data;
           if (new_state) {
             HA_CONFIG.entityStates.set(entity_id, new_state);
             updateSwitchesFromHA();
-            
+
             // Update control panel if active
             if (activeControlIndex !== -1) {
               const remoteData = remotesData.get(currentRemoteId);
@@ -356,17 +356,17 @@ const RemoteModule = (() => {
   // Create HTML structure for remote modal (3-panel design from test.html)
   const createRemoteModal = (position, targetScene, switchesOverride = null) => {
     const remoteId = `remote-${instanceId++}`;
-    
+
     // Create switches for this remote - use provided switches or defaults
     const switches = switchesOverride ? JSON.parse(JSON.stringify(switchesOverride)) : JSON.parse(JSON.stringify(DEFAULT_SWITCHES));
-    
+
     const container = document.createElement('div');
     container.className = 'remote-container';
     container.id = remoteId;
     container.dataset.position = JSON.stringify(position);
     container.dataset.targetScene = targetScene || '';
     container.dataset.visible = 'true';
-    
+
     container.innerHTML = `
       <!-- Main Button -->
       <button class="remote-main-button" id="${remoteId}-mainButton">
@@ -431,7 +431,7 @@ const RemoteModule = (() => {
     `;
 
     document.body.appendChild(container);
-    
+
     // Store remote data
     remotesData.set(remoteId, {
       id: remoteId,
@@ -442,10 +442,10 @@ const RemoteModule = (() => {
       container: container,
       visible: true
     });
-    
+
     // Initialize the modal
     initRemoteModal(remoteId);
-    
+
     return remoteId;
   };
 
@@ -471,21 +471,21 @@ const RemoteModule = (() => {
 
     // Populate icon grid
     populateIconGrid(iconGrid);
-    
+
     // Render switches
     renderSwitches(switchGrid, remoteData.switches, remoteId);
 
     // Setup event listeners
-    setupEventListeners(remoteId, modal, panelSwitch, panelEdit, panelControl, 
-                       mainButton, closeModalBtn, cancelEditBtn, editForm, 
-                       switchNameInput, entityIdInput, controlTypeSelect, 
-                       switchGrid, iconGrid, remoteData);
+    setupEventListeners(remoteId, modal, panelSwitch, panelEdit, panelControl,
+      mainButton, closeModalBtn, cancelEditBtn, editForm,
+      switchNameInput, entityIdInput, controlTypeSelect,
+      switchGrid, iconGrid, remoteData);
   };
 
   // Populate icon selection grid
   const populateIconGrid = (iconGridElement) => {
     if (!iconGridElement) return;
-    
+
     iconGridElement.innerHTML = '';
     ICONS.forEach(icon => {
       const iconOption = document.createElement('div');
@@ -527,7 +527,7 @@ const RemoteModule = (() => {
   // Render switches
   const renderSwitches = (gridElement, switchesData, remoteId) => {
     if (!gridElement) return;
-    
+
     gridElement.innerHTML = '';
     switchesData.forEach((sw, index) => {
       const switchItem = document.createElement('div');
@@ -558,370 +558,372 @@ const RemoteModule = (() => {
     });
   };
 
-// Setup event listeners for a switch (from test.html) - FIXED for mobile
-const setupSwitchEventListeners = (switchBtn, index, switchesData, remoteId) => {
-  const LONG_PRESS_DURATION = 500; // 500ms for long press
-  let pressTimer = null;
-  let isLongPress = false;
-  let touchStartTime = 0;
-  let touchMoved = false;
-  let startX = 0, startY = 0;
+  // Setup event listeners for a switch - FIXED for mobile
+  const setupSwitchEventListeners = (switchBtn, index, switchesData, remoteId) => {
+    const LONG_PRESS_DURATION = 500; // 500ms for long press
+    let pressTimer = null;
+    let isLongPress = false;
+    let touchStartTime = 0;
+    let touchMoved = false;
+    let startX = 0, startY = 0;
 
-  // Mouse events for desktop
-  switchBtn.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    pressTimer = setTimeout(() => {
-      isLongPress = true;
-      openEditPanel(index, remoteId);
-    }, LONG_PRESS_DURATION);
-  });
-
-  switchBtn.addEventListener('mouseup', (e) => {
-    e.preventDefault();
-    clearTimeout(pressTimer);
-    
-    if (!isLongPress) {
-      handleSwitchClick(index, remoteId);
-    }
-    isLongPress = false;
-  });
-
-  switchBtn.addEventListener('mouseleave', () => {
-    clearTimeout(pressTimer);
-    isLongPress = false;
-  });
-
-  // Touch events for mobile
-  switchBtn.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const touch = e.touches[0];
-    startX = touch.clientX;
-    startY = touch.clientY;
-    touchStartTime = Date.now();
-    touchMoved = false;
-    
-    pressTimer = setTimeout(() => {
-      if (!touchMoved) {
+    // Mouse events for desktop
+    switchBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      pressTimer = setTimeout(() => {
         isLongPress = true;
         openEditPanel(index, remoteId);
-      }
-    }, LONG_PRESS_DURATION);
-  });
+      }, LONG_PRESS_DURATION);
+    });
 
-  switchBtn.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const touch = e.touches[0];
-    const deltaX = Math.abs(touch.clientX - startX);
-    const deltaY = Math.abs(touch.clientY - startY);
-    
-    // If moved more than 10px, consider it a scroll/move not a tap
-    if (deltaX > 10 || deltaY > 10) {
-      touchMoved = true;
+    switchBtn.addEventListener('mouseup', (e) => {
+      e.preventDefault();
       clearTimeout(pressTimer);
+
+      if (!isLongPress) {
+        handleSwitchClick(index, remoteId);
+      }
+      isLongPress = false;
+    });
+
+    switchBtn.addEventListener('mouseleave', () => {
+      clearTimeout(pressTimer);
+      isLongPress = false;
+    });
+
+    // Touch events for mobile
+    switchBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      touchStartTime = Date.now();
+      touchMoved = false;
+
+      pressTimer = setTimeout(() => {
+        if (!touchMoved) {
+          isLongPress = true;
+          openEditPanel(index, remoteId);
+        }
+      }, LONG_PRESS_DURATION);
+    });
+
+    switchBtn.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const touch = e.touches[0];
+      const deltaX = Math.abs(touch.clientX - startX);
+      const deltaY = Math.abs(touch.clientY - startY);
+
+      // If moved more than 10px, consider it a scroll/move not a tap
+      if (deltaX > 10 || deltaY > 10) {
+        touchMoved = true;
+        clearTimeout(pressTimer);
+      }
+    });
+
+    switchBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      clearTimeout(pressTimer);
+
+      const touchEndTime = Date.now();
+      const touchDuration = touchEndTime - touchStartTime;
+
+      // Only trigger click if it was a quick tap (less than 300ms) and no movement
+      if (!isLongPress && !touchMoved && touchDuration < 300) {
+        handleSwitchClick(index, remoteId);
+      }
+
+      isLongPress = false;
+      touchMoved = false;
+    });
+
+    switchBtn.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      clearTimeout(pressTimer);
+      isLongPress = false;
+      touchMoved = false;
+    });
+
+    // Prevent context menu on long press
+    switchBtn.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    });
+  };
+
+  // Handle switch click - FIXED for mobile
+  const handleSwitchClick = (index, remoteId) => {
+    const remoteData = remotesData.get(remoteId);
+    if (!remoteData) return;
+
+    const sw = remoteData.switches[index];
+
+    // If no entity ID, open edit panel
+    if (!sw.entityId || sw.entityId.trim() === '') {
+      openEditPanel(index, remoteId);
+      return;
     }
-  });
 
-  switchBtn.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    clearTimeout(pressTimer);
-    
-    const touchEndTime = Date.now();
-    const touchDuration = touchEndTime - touchStartTime;
-    
-    // Only trigger click if it was a quick tap (less than 300ms) and no movement
-    if (!isLongPress && !touchMoved && touchDuration < 300) {
-      handleSwitchClick(index, remoteId);
+    if (sw.controlType === 'toggle') {
+      toggleSwitch(index, remoteId);
+    } else {
+      openControlPanel(index, remoteId);
     }
-    
-    isLongPress = false;
-    touchMoved = false;
-  });
+  };
 
-  switchBtn.addEventListener('touchcancel', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    clearTimeout(pressTimer);
-    isLongPress = false;
-    touchMoved = false;
-  });
-
-  // Prevent context menu on long press
-  switchBtn.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    return false;
-  });
-};
-// Handle switch click (from test.html) - FIXED for mobile
-const handleSwitchClick = (index, remoteId) => {
-  const remoteData = remotesData.get(remoteId);
-  if (!remoteData) return;
-  
-  const sw = remoteData.switches[index];
-  
-  // If no entity ID, open edit panel
-  if (!sw.entityId || sw.entityId.trim() === '') {
-    openEditPanel(index, remoteId);
-    return;
-  }
-  
-  if (sw.controlType === 'toggle') {
-    toggleSwitch(index, remoteId);
-  } else {
-    openControlPanel(index, remoteId);
-  }
-};
-
-  // Open control panel (from test.html)
+  // Open control panel
   const openControlPanel = (index, remoteId) => {
     activeControlIndex = index;
     currentRemoteId = remoteId;
-    
+
     const remoteData = remotesData.get(remoteId);
     if (!remoteData) return;
-    
+
     const sw = remoteData.switches[index];
-    
+
     const panelSwitch = document.getElementById(`${remoteId}-panelSwitch`);
     const panelEdit = document.getElementById(`${remoteId}-panelEdit`);
     const panelControl = document.getElementById(`${remoteId}-panelControl`);
     const controlTitle = document.getElementById(`${remoteId}-controlTitle`);
-    
+
     if (controlTitle) controlTitle.textContent = sw.name + ' control';
-    
+
     renderControlUI(sw, remoteId);
-    
+
     panelSwitch.classList.add('hidden');
     panelEdit.classList.add('hidden');
     panelControl.classList.remove('hidden');
   };
 
-// Render control UI (from test.html) - FIXED
-const renderControlUI = (sw, remoteId) => {
-  const controlContainer = document.getElementById(`${remoteId}-controlContainer`);
-  if (!controlContainer) return;
-  
-  const type = sw.controlType;
-  let html = '';
-  
-  if (type === 'dimmer') {
-    let b = getBrightness(sw.entityId);
-    html = `<div class="remote-slider-unit">
-              <span class="remote-slider-label">Brightness</span>
-              <input type="range" min="0" max="100" value="${b}" class="remote-dynamic-slider remote-brightness-slider" id="${remoteId}-dimmerSlider">
-              <div class="remote-control-value" id="${remoteId}-dimmerValue">${b}%</div>
-            </div>`;
-  } else if (type === 'cct') {
-    let b = getBrightness(sw.entityId);
-    let t = getColorTemp(sw.entityId);
-    let kelvin = Math.round(6500 - (t/100)*(6500-2000));
-    html = `<div class="remote-slider-unit">
-              <span class="remote-slider-label">Brightness</span>
-              <input type="range" min="0" max="100" value="${b}" class="remote-dynamic-slider remote-brightness-slider" id="${remoteId}-cctBrightSlider">
-              <div class="remote-control-value" id="${remoteId}-cctBrightValue">${b}%</div>
-            </div>
-            <div class="remote-slider-unit">
-              <span class="remote-slider-label">Color temp</span>
-              <input type="range" min="0" max="100" value="${t}" class="remote-dynamic-slider remote-temp-slider" id="${remoteId}-cctTempSlider">
-              <div class="remote-control-value" id="${remoteId}-cctTempValue">${kelvin}K</div>
-            </div>`;
-  } else if (type === 'rgb') {
-    let b = getBrightness(sw.entityId);
-    let h = getHue(sw.entityId);
-    html = `<div class="remote-slider-unit">
-              <span class="remote-slider-label">Brightness</span>
-              <input type="range" min="0" max="100" value="${b}" class="remote-dynamic-slider remote-brightness-slider" id="${remoteId}-rgbBrightSlider">
-              <div class="remote-control-value" id="${remoteId}-rgbBrightValue">${b}%</div>
-            </div>
-            <div class="remote-slider-unit">
-              <span class="remote-slider-label">Hue</span>
-              <input type="range" min="0" max="360" value="${h}" class="remote-dynamic-slider remote-rgb-slider" id="${remoteId}-rgbHueSlider">
-              <div class="remote-control-value" id="${remoteId}-rgbHueValue">Hue ${h}°</div>
-            </div>`;
-  } else if (type === 'curtain') {
-    let pos = getCurtainPosition(sw.entityId);
-    html = `<div class="remote-slider-unit">
-              <span class="remote-slider-label">Position</span>
-              <input type="range" min="0" max="100" value="${pos}" class="remote-dynamic-slider remote-brightness-slider" id="${remoteId}-curtainSlider">
-              <div class="remote-control-value" id="${remoteId}-curtainValue">${pos}%</div>
-            </div>`;
-  } else {
-    html = '<div class="remote-toggle-placeholder">Toggle mode</div>';
-  }
-  
-  controlContainer.innerHTML = html;
-  
-  // Attach events after DOM is updated
-  setTimeout(() => {
-    attachControlEvents(type, sw, remoteId);
-  }, 0);
-};
+  // Render control UI
+  const renderControlUI = (sw, remoteId) => {
+    const controlContainer = document.getElementById(`${remoteId}-controlContainer`);
+    if (!controlContainer) return;
 
-// Attach control events (from test.html) - FIXED for 3D rotation and no blue overlay
-const attachControlEvents = (type, sw, remoteId) => {
-  if (type === 'dimmer') {
-    const s = document.getElementById(`${remoteId}-dimmerSlider`);
-    const v = document.getElementById(`${remoteId}-dimmerValue`);
-    if (s) {
-      // Remove any inline styles that might add blue overlay
-      s.style.boxShadow = 'none';
-      
-      // Stop propagation to prevent 3D rotation
-      s.addEventListener('mousedown', (e) => {
-        e.stopPropagation();
-      });
-      s.addEventListener('touchstart', (e) => {
-        e.stopPropagation();
-      });
-      s.addEventListener('pointerdown', (e) => {
-        e.stopPropagation();
-      });
-      
-      s.addEventListener('input', (e) => {
-        e.stopPropagation();
-        v.textContent = e.target.value + '%';
-      });
-      s.addEventListener('change', (e) => {
-        e.stopPropagation();
-        let val = parseInt(e.target.value);
-        callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: val });
-      });
-    }
-  }
-  if (type === 'cct') {
-    const bs = document.getElementById(`${remoteId}-cctBrightSlider`);
-    const bv = document.getElementById(`${remoteId}-cctBrightValue`);
-    if (bs) {
-      bs.style.boxShadow = 'none';
-      bs.addEventListener('mousedown', (e) => e.stopPropagation());
-      bs.addEventListener('touchstart', (e) => e.stopPropagation());
-      bs.addEventListener('pointerdown', (e) => e.stopPropagation());
-      bs.addEventListener('input', (e) => {
-        e.stopPropagation();
-        bv.textContent = e.target.value + '%';
-      });
-      bs.addEventListener('change', (e) => {
-        e.stopPropagation();
-        callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: parseInt(e.target.value) });
-      });
-    }
-    const ts = document.getElementById(`${remoteId}-cctTempSlider`);
-    const tv = document.getElementById(`${remoteId}-cctTempValue`);
-    if (ts) {
-      ts.style.boxShadow = 'none';
-      ts.addEventListener('mousedown', (e) => e.stopPropagation());
-      ts.addEventListener('touchstart', (e) => e.stopPropagation());
-      ts.addEventListener('pointerdown', (e) => e.stopPropagation());
-      const updateTemp = (val) => { let k = Math.round(6500 - (val/100)*(6500-2000)); tv.textContent = k+'K'; };
-      ts.addEventListener('input', (e) => {
-        e.stopPropagation();
-        updateTemp(e.target.value);
-      });
-      ts.addEventListener('change', (e) => {
-        e.stopPropagation();
-        let mireds = Math.round(153 + (500-153)*(e.target.value/100));
-        callService('light', 'turn_on', { entity_id: sw.entityId, color_temp: mireds });
-      });
-    }
-  }
-  if (type === 'rgb') {
-    const bs = document.getElementById(`${remoteId}-rgbBrightSlider`);
-    const bv = document.getElementById(`${remoteId}-rgbBrightValue`);
-    if (bs) {
-      bs.style.boxShadow = 'none';
-      bs.addEventListener('mousedown', (e) => e.stopPropagation());
-      bs.addEventListener('touchstart', (e) => e.stopPropagation());
-      bs.addEventListener('pointerdown', (e) => e.stopPropagation());
-      bs.addEventListener('input', (e) => {
-        e.stopPropagation();
-        bv.textContent = e.target.value+'%';
-      });
-      bs.addEventListener('change', (e) => {
-        e.stopPropagation();
-        callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: parseInt(e.target.value) });
-      });
-    }
-    const hs = document.getElementById(`${remoteId}-rgbHueSlider`);
-    const hv = document.getElementById(`${remoteId}-rgbHueValue`);
-    if (hs) {
-      hs.style.boxShadow = 'none';
-      hs.addEventListener('mousedown', (e) => e.stopPropagation());
-      hs.addEventListener('touchstart', (e) => e.stopPropagation());
-      hs.addEventListener('pointerdown', (e) => e.stopPropagation());
-      hs.addEventListener('input', (e) => {
-        e.stopPropagation();
-        hv.textContent = `Hue ${e.target.value}°`;
-      });
-      hs.addEventListener('change', (e) => {
-        e.stopPropagation();
-        let h = parseInt(e.target.value);
-        callService('light', 'turn_on', { entity_id: sw.entityId, hs_color: [h, 100] });
-      });
-    }
-  }
-  if (type === 'curtain') {
-    const s = document.getElementById(`${remoteId}-curtainSlider`);
-    const v = document.getElementById(`${remoteId}-curtainValue`);
-    if (s) {
-      s.style.boxShadow = 'none';
-      s.addEventListener('mousedown', (e) => e.stopPropagation());
-      s.addEventListener('touchstart', (e) => e.stopPropagation());
-      s.addEventListener('pointerdown', (e) => e.stopPropagation());
-      s.addEventListener('input', (e) => {
-        e.stopPropagation();
-        v.textContent = e.target.value+'%';
-      });
-      s.addEventListener('change', (e) => {
-        e.stopPropagation();
-        callService('cover', 'set_cover_position', { entity_id: sw.entityId, position: parseInt(e.target.value) });
-      });
-    }
-  }
-};
+    const type = sw.controlType;
+    let html = '';
 
-// Toggle switch (from test.html) - FIXED
-const toggleSwitch = async (index, remoteId) => {
-  const remoteData = remotesData.get(remoteId);
-  if (!remoteData) return;
-  
-  const sw = remoteData.switches[index];
-  
-  // If no entity ID, open edit panel
-  if (!sw.entityId || sw.entityId.trim() === '') {
-    openEditPanel(index, remoteId);
-    return;
-  }
-  
-  const now = Date.now();
-  if (sw._lastToggle && (now - sw._lastToggle) < 500) return;
-  
-  const current = sw.active;
-  
-  // Optimistic update
-  sw.active = !current;
-  updateSwitchVisualState(remoteId, index, sw.active);
-  
-  try {
-    if (HA_CONFIG.connected && HA_CONFIG.socket) {
-      const domain = sw.entityId.split('.')[0];
-      callService(domain, 'toggle', { entity_id: sw.entityId });
-      sw._lastToggle = Date.now();
+    if (type === 'dimmer') {
+      let b = getBrightness(sw.entityId);
+      html = `<div class="remote-slider-unit">
+                <span class="remote-slider-label">Brightness</span>
+                <input type="range" min="0" max="100" value="${b}" class="remote-dynamic-slider remote-brightness-slider" id="${remoteId}-dimmerSlider">
+                <div class="remote-control-value" id="${remoteId}-dimmerValue">${b}%</div>
+              </div>`;
+    } else if (type === 'cct') {
+      let b = getBrightness(sw.entityId);
+      let t = getColorTemp(sw.entityId);
+      let kelvin = Math.round(6500 - (t / 100) * (6500 - 2000));
+      html = `<div class="remote-slider-unit">
+                <span class="remote-slider-label">Brightness</span>
+                <input type="range" min="0" max="100" value="${b}" class="remote-dynamic-slider remote-brightness-slider" id="${remoteId}-cctBrightSlider">
+                <div class="remote-control-value" id="${remoteId}-cctBrightValue">${b}%</div>
+              </div>
+              <div class="remote-slider-unit">
+                <span class="remote-slider-label">Color temp</span>
+                <input type="range" min="0" max="100" value="${t}" class="remote-dynamic-slider remote-temp-slider" id="${remoteId}-cctTempSlider">
+                <div class="remote-control-value" id="${remoteId}-cctTempValue">${kelvin}K</div>
+              </div>`;
+    } else if (type === 'rgb') {
+      let b = getBrightness(sw.entityId);
+      let h = getHue(sw.entityId);
+      html = `<div class="remote-slider-unit">
+                <span class="remote-slider-label">Brightness</span>
+                <input type="range" min="0" max="100" value="${b}" class="remote-dynamic-slider remote-brightness-slider" id="${remoteId}-rgbBrightSlider">
+                <div class="remote-control-value" id="${remoteId}-rgbBrightValue">${b}%</div>
+              </div>
+              <div class="remote-slider-unit">
+                <span class="remote-slider-label">Hue</span>
+                <input type="range" min="0" max="360" value="${h}" class="remote-dynamic-slider remote-rgb-slider" id="${remoteId}-rgbHueSlider">
+                <div class="remote-control-value" id="${remoteId}-rgbHueValue">Hue ${h}°</div>
+              </div>`;
+    } else if (type === 'curtain') {
+      let pos = getCurtainPosition(sw.entityId);
+      html = `<div class="remote-slider-unit">
+                <span class="remote-slider-label">Position</span>
+                <input type="range" min="0" max="100" value="${pos}" class="remote-dynamic-slider remote-brightness-slider" id="${remoteId}-curtainSlider">
+                <div class="remote-control-value" id="${remoteId}-curtainValue">${pos}%</div>
+              </div>`;
     } else {
-      // If not connected, revert
+      html = '<div class="remote-toggle-placeholder">Toggle mode</div>';
+    }
+
+    controlContainer.innerHTML = html;
+
+    // Attach events after DOM is updated
+    setTimeout(() => {
+      attachControlEvents(type, sw, remoteId);
+    }, 0);
+  };
+
+  // Attach control events - FIXED for 3D rotation
+  const attachControlEvents = (type, sw, remoteId) => {
+    if (type === 'dimmer') {
+      const s = document.getElementById(`${remoteId}-dimmerSlider`);
+      const v = document.getElementById(`${remoteId}-dimmerValue`);
+      if (s) {
+        // Remove any inline styles that might add blue overlay
+        s.style.boxShadow = 'none';
+
+        // Stop propagation to prevent 3D rotation
+        s.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+        });
+        s.addEventListener('touchstart', (e) => {
+          e.stopPropagation();
+        });
+        s.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+        });
+
+        s.addEventListener('input', (e) => {
+          e.stopPropagation();
+          v.textContent = e.target.value + '%';
+        });
+        s.addEventListener('change', (e) => {
+          e.stopPropagation();
+          let val = parseInt(e.target.value);
+          callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: val });
+        });
+      }
+    }
+    if (type === 'cct') {
+      const bs = document.getElementById(`${remoteId}-cctBrightSlider`);
+      const bv = document.getElementById(`${remoteId}-cctBrightValue`);
+      if (bs) {
+        bs.style.boxShadow = 'none';
+        bs.addEventListener('mousedown', (e) => e.stopPropagation());
+        bs.addEventListener('touchstart', (e) => e.stopPropagation());
+        bs.addEventListener('pointerdown', (e) => e.stopPropagation());
+        bs.addEventListener('input', (e) => {
+          e.stopPropagation();
+          bv.textContent = e.target.value + '%';
+        });
+        bs.addEventListener('change', (e) => {
+          e.stopPropagation();
+          callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: parseInt(e.target.value) });
+        });
+      }
+      const ts = document.getElementById(`${remoteId}-cctTempSlider`);
+      const tv = document.getElementById(`${remoteId}-cctTempValue`);
+      if (ts) {
+        ts.style.boxShadow = 'none';
+        ts.addEventListener('mousedown', (e) => e.stopPropagation());
+        ts.addEventListener('touchstart', (e) => e.stopPropagation());
+        ts.addEventListener('pointerdown', (e) => e.stopPropagation());
+        const updateTemp = (val) => { let k = Math.round(6500 - (val / 100) * (6500 - 2000)); tv.textContent = k + 'K'; };
+        ts.addEventListener('input', (e) => {
+          e.stopPropagation();
+          updateTemp(e.target.value);
+        });
+        ts.addEventListener('change', (e) => {
+          e.stopPropagation();
+          let mireds = Math.round(153 + (500 - 153) * (e.target.value / 100));
+          callService('light', 'turn_on', { entity_id: sw.entityId, color_temp: mireds });
+        });
+      }
+    }
+    if (type === 'rgb') {
+      const bs = document.getElementById(`${remoteId}-rgbBrightSlider`);
+      const bv = document.getElementById(`${remoteId}-rgbBrightValue`);
+      if (bs) {
+        bs.style.boxShadow = 'none';
+        bs.addEventListener('mousedown', (e) => e.stopPropagation());
+        bs.addEventListener('touchstart', (e) => e.stopPropagation());
+        bs.addEventListener('pointerdown', (e) => e.stopPropagation());
+        bs.addEventListener('input', (e) => {
+          e.stopPropagation();
+          bv.textContent = e.target.value + '%';
+        });
+        bs.addEventListener('change', (e) => {
+          e.stopPropagation();
+          callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: parseInt(e.target.value) });
+        });
+      }
+      const hs = document.getElementById(`${remoteId}-rgbHueSlider`);
+      const hv = document.getElementById(`${remoteId}-rgbHueValue`);
+      if (hs) {
+        hs.style.boxShadow = 'none';
+        hs.addEventListener('mousedown', (e) => e.stopPropagation());
+        hs.addEventListener('touchstart', (e) => e.stopPropagation());
+        hs.addEventListener('pointerdown', (e) => e.stopPropagation());
+        hs.addEventListener('input', (e) => {
+          e.stopPropagation();
+          hv.textContent = `Hue ${e.target.value}°`;
+        });
+        hs.addEventListener('change', (e) => {
+          e.stopPropagation();
+          let h = parseInt(e.target.value);
+          callService('light', 'turn_on', { entity_id: sw.entityId, hs_color: [h, 100] });
+        });
+      }
+    }
+    if (type === 'curtain') {
+      const s = document.getElementById(`${remoteId}-curtainSlider`);
+      const v = document.getElementById(`${remoteId}-curtainValue`);
+      if (s) {
+        s.style.boxShadow = 'none';
+        s.addEventListener('mousedown', (e) => e.stopPropagation());
+        s.addEventListener('touchstart', (e) => e.stopPropagation());
+        s.addEventListener('pointerdown', (e) => e.stopPropagation());
+        s.addEventListener('input', (e) => {
+          e.stopPropagation();
+          v.textContent = e.target.value + '%';
+        });
+        s.addEventListener('change', (e) => {
+          e.stopPropagation();
+          callService('cover', 'set_cover_position', { entity_id: sw.entityId, position: parseInt(e.target.value) });
+        });
+      }
+    }
+  };
+
+  // Toggle switch - FIXED
+  const toggleSwitch = async (index, remoteId) => {
+    const remoteData = remotesData.get(remoteId);
+    if (!remoteData) return;
+
+    const sw = remoteData.switches[index];
+
+    // If no entity ID, open edit panel
+    if (!sw.entityId || sw.entityId.trim() === '') {
+      openEditPanel(index, remoteId);
+      return;
+    }
+
+    const now = Date.now();
+    if (sw._lastToggle && (now - sw._lastToggle) < 500) return;
+
+    const current = sw.active;
+
+    // Optimistic update
+    sw.active = !current;
+    updateSwitchVisualState(remoteId, index, sw.active);
+
+    try {
+      if (HA_CONFIG.connected && HA_CONFIG.socket) {
+        const domain = sw.entityId.split('.')[0];
+        callService(domain, 'toggle', { entity_id: sw.entityId });
+        sw._lastToggle = Date.now();
+      } else {
+        // If not connected, revert
+        sw.active = current;
+        updateSwitchVisualState(remoteId, index, current);
+      }
+    } catch {
       sw.active = current;
       updateSwitchVisualState(remoteId, index, current);
     }
-  } catch {
-    sw.active = current;
-    updateSwitchVisualState(remoteId, index, current);
-  }
-};
-  // Open edit panel (from test.html)
+  };
+
+  // Open edit panel
   const openEditPanel = (index, remoteId) => {
     const remoteData = remotesData.get(remoteId);
     if (!remoteData) return;
@@ -956,13 +958,13 @@ const toggleSwitch = async (index, remoteId) => {
     panelSwitch.classList.add('hidden');
     panelControl.classList.add('hidden');
     panelEdit.classList.remove('hidden');
-    
+
     setTimeout(() => {
       switchNameInput.focus();
     }, 100);
   };
 
-// Show switch panel (from test.html) - FIXED
+  // Show switch panel - FIXED
 const showSwitchPanel = (remoteId) => {
   console.log('Showing switch panel for:', remoteId); // Debug log
   
@@ -991,12 +993,28 @@ const showSwitchPanel = (remoteId) => {
   currentEditIndex = -1;
 };
 
-// Also update the close button handlers in setupEventListeners
-const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl, 
-                             mainButton, closeModalBtn, cancelEditBtn, editForm, 
-                             switchNameInput, entityIdInput, controlTypeSelect, 
-                             switchGrid, iconGrid, remoteData) => {
-    
+// Add a function to close the modal completely
+const closeRemoteModal = (remoteId) => {
+  const modal = document.getElementById(`${remoteId}-modal`);
+  const mainButton = document.getElementById(`${remoteId}-mainButton`);
+  
+  if (modal) {
+    modal.classList.remove('show');
+    document.body.classList.remove('modal-open');
+  }
+  
+  if (mainButton) {
+    mainButton.classList.remove('active-main');
+    mainButton.style.display = 'flex';
+  }
+};
+
+  // Setup event listeners for a remote instance - FIXED
+  const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
+    mainButton, closeModalBtn, cancelEditBtn, editForm,
+    switchNameInput, entityIdInput, controlTypeSelect,
+    switchGrid, iconGrid, remoteData) => {
+
     // Open main modal
     mainButton.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1005,6 +1023,8 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
       modal.classList.add('show');
       mainButton.classList.add('active-main');
       mainButton.style.display = 'none';
+      // Disable 3D rotation when modal is open
+      document.body.classList.add('modal-open');
     });
 
     mainButton.addEventListener('touchend', (e) => {
@@ -1014,15 +1034,17 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
       modal.classList.add('show');
       mainButton.classList.add('active-main');
       mainButton.style.display = 'none';
+      // Disable 3D rotation when modal is open
+      document.body.classList.add('modal-open');
     });
 
     // Close button - FIXED for mobile
     const handleCloseButton = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       console.log('Close button clicked'); // Debug log
-      
+
       // Check which panel is visible
       if (!panelSwitch.classList.contains('hidden')) {
         // On main grid → close modal
@@ -1030,6 +1052,8 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
         modal.classList.remove('show');
         mainButton.classList.remove('active-main');
         mainButton.style.display = 'flex';
+        // Re-enable 3D rotation when modal is closed
+        document.body.classList.remove('modal-open');
       } else {
         // In edit or control → go back to switch panel
         console.log('Going back to switch panel');
@@ -1039,7 +1063,7 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
 
     closeModalBtn.addEventListener('click', handleCloseButton);
     closeModalBtn.addEventListener('touchend', handleCloseButton);
-    
+
     // Prevent touchstart from triggering other events
     closeModalBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -1056,7 +1080,7 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
 
     cancelEditBtn.addEventListener('click', handleCancelEdit);
     cancelEditBtn.addEventListener('touchend', handleCancelEdit);
-    
+
     cancelEditBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1097,17 +1121,17 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
       input.addEventListener('click', (e) => {
         e.stopPropagation();
       });
-      
+
       input.addEventListener('touchend', (e) => {
         e.stopPropagation();
         e.preventDefault();
         input.focus();
       });
-      
+
       input.addEventListener('mousedown', (e) => {
         e.stopPropagation();
       });
-      
+
       input.addEventListener('touchstart', (e) => {
         e.stopPropagation();
       });
@@ -1118,12 +1142,14 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
       if (e.target === modal) {
         e.preventDefault();
         e.stopPropagation();
-        
+
         if (!panelSwitch.classList.contains('hidden')) {
           // On main grid → close modal
           modal.classList.remove('show');
           mainButton.classList.remove('active-main');
           mainButton.style.display = 'flex';
+          // Re-enable 3D rotation when modal is closed
+          document.body.classList.remove('modal-open');
         } else {
           // In edit or control → go back to switch panel
           showSwitchPanel(id);
@@ -1141,6 +1167,8 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
           modal.classList.remove('show');
           mainButton.classList.remove('active-main');
           mainButton.style.display = 'flex';
+          // Re-enable 3D rotation when modal is closed
+          document.body.classList.remove('modal-open');
         } else {
           showSwitchPanel(id);
         }
@@ -1170,6 +1198,15 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
         mainButton.classList.add('active-main');
         mainButton.style.display = 'none';
       }
+    },
+
+    // Delete a remote by ID - ADDED HERE
+    deleteRemote: (remoteId) => {
+      const container = document.getElementById(remoteId);
+      if (container) {
+        container.remove();
+      }
+      return remotesData.delete(remoteId);
     },
 
     // Get remote data for saving
@@ -1207,12 +1244,12 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
       // Clear existing remotes
       document.querySelectorAll('.remote-container').forEach(el => el.remove());
       remotesData.clear();
-      
+
       // Create new remotes with saved switch data
       remotesDataArray.forEach(remoteData => {
-        const position = Array.isArray(remoteData.position) ? 
+        const position = Array.isArray(remoteData.position) ?
           new THREE.Vector3().fromArray(remoteData.position) : remoteData.position;
-        
+
         // Convert saved switches to proper format
         let savedSwitches = [];
         if (remoteData.switches && Array.isArray(remoteData.switches)) {
@@ -1228,11 +1265,11 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
           // Use defaults if no switches provided
           savedSwitches = JSON.parse(JSON.stringify(DEFAULT_SWITCHES));
         }
-        
+
         // Create remote with saved switches
         createRemoteModal(position, remoteData.targetScene || '', savedSwitches);
       });
-      
+
       // If HA is connected, fetch states for all loaded entities
       if (HA_CONFIG.connected) {
         updateSwitchesFromHA();
@@ -1250,27 +1287,27 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
       remotesData.forEach((remoteData, remoteId) => {
         const container = document.getElementById(remoteId);
         if (!container) return;
-        
+
         const remote = remotesData.get(remoteId);
         if (!remote || !remote.position) return;
-        
+
         // Check if remote should be visible for current scene
         const shouldBeVisible = !remote.targetScene || remote.targetScene === currentScene;
-        
+
         if (!shouldBeVisible) {
           container.style.display = 'none';
           return;
         }
-        
+
         // Project 3D position to screen coordinates
         const screenPoint = remote.position.clone().project(camera);
         const x = (screenPoint.x * 0.5 + 0.5) * window.innerWidth;
         const y = (-screenPoint.y * 0.5 + 0.5) * window.innerHeight;
-        
+
         // Only show if in front of camera and on screen
-        if (screenPoint.z < 1 && 
-            x >= -50 && x <= window.innerWidth + 50 && 
-            y >= -50 && y <= window.innerHeight + 50) {
+        if (screenPoint.z < 1 &&
+          x >= -50 && x <= window.innerWidth + 50 &&
+          y >= -50 && y <= window.innerHeight + 50) {
           container.style.display = 'block';
           container.style.left = x + 'px';
           container.style.top = y + 'px';
@@ -1291,7 +1328,7 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
         if (container && remoteData) {
           const shouldBeVisible = !remoteData.targetScene || remoteData.targetScene === sceneName;
           container.dataset.visible = shouldBeVisible.toString();
-          
+
           if (!shouldBeVisible) {
             container.style.display = 'none';
             container.style.pointerEvents = 'none';
@@ -1305,7 +1342,7 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
 
     // Home Assistant functions
     getHAConfig: () => {
-      return { 
+      return {
         url: HA_CONFIG.url,
         connected: HA_CONFIG.connected,
         socketState: HA_CONFIG.socket ? HA_CONFIG.socket.readyState : 'CLOSED'
@@ -1336,7 +1373,7 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
         initWebSocket();
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
-      
+
       updateSwitchesFromHA();
       return { success: HA_CONFIG.connected, message: HA_CONFIG.connected ? 'Sync completed' : 'Not connected' };
     },
@@ -1345,7 +1382,7 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
     initHomeAssistant: async () => {
       console.log('Initializing Home Assistant WebSocket connection...');
       initWebSocket();
-      
+
       return new Promise((resolve) => {
         const checkConnection = setInterval(() => {
           if (HA_CONFIG.connected) {
@@ -1353,7 +1390,7 @@ const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
             resolve({ success: true, message: 'Connected to Home Assistant' });
           }
         }, 1000);
-        
+
         setTimeout(() => {
           clearInterval(checkConnection);
           resolve({ success: false, message: 'Connection timeout' });

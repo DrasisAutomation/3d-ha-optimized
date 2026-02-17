@@ -29,6 +29,11 @@
   Scene Selection Mode Active - Click on a hotspot
 </div>
 
+<!-- Delete Mode Indicator -->
+<div class="delete-mode-indicator" id="deleteModeIndicator">
+  Delete Mode Active - Click on a remote or hotspot to delete
+</div>
+
 <!-- Sidebar with scenes list -->
 <div class="sidebar" id="sidebar">
   <div class="sidebar-header">
@@ -117,6 +122,7 @@ let currentScene = "scene1";
 let mode = "view"; // view | add | move
 let sceneSelectionMode = false;
 let selectedHotspotForScene = null;
+let deleteMode = false;
 
 /* ================== REMOTE MODE ================== */
 let remoteMode = false;
@@ -852,16 +858,21 @@ document.addEventListener('touchstart', (e) => {
 
 /* ================== KEY CONTROLS ================== */
 
+/* ================== KEY CONTROLS ================== */
+
 const keys = new Set();
 
 document.addEventListener("keydown", e => {
   keys.add(e.key.toLowerCase());
 
+  // Remote placement mode (S + R)
   if (keys.has("s") && keys.has("r")) {
     if (!remoteMode) {
       remoteMode = true;
+      deleteMode = false; // Disable delete mode
       remoteTargetScene = currentScene;
       updateRemoteModeIndicator();
+      updateDeleteModeIndicator();
       console.log("Remote placement mode ACTIVATED for scene: " + SCENES[currentScene].name);
     }
     mode = "view";
@@ -869,6 +880,7 @@ document.addEventListener("keydown", e => {
     updateSceneSelectionIndicator();
   }
   
+  // Clear modes (M + D)
   if (keys.has("m") && keys.has("d")) {
     if (remoteMode) {
       remoteMode = false;
@@ -880,11 +892,17 @@ document.addEventListener("keydown", e => {
       updateSceneSelectionIndicator();
       console.log("Scene selection mode DEACTIVATED.");
     }
+    if (deleteMode) {
+      deleteMode = false;
+      updateDeleteModeIndicator();
+      console.log("Delete mode DEACTIVATED.");
+    }
     mode = "view";
   }
   
+  // Scene selection mode (N + E)
   if (keys.has("n") && keys.has("e")) {
-    if (!sceneSelectionMode && !remoteMode) {
+    if (!sceneSelectionMode && !remoteMode && !deleteMode) {
       sceneSelectionMode = true;
       mode = "view";
       updateSceneSelectionIndicator();
@@ -892,41 +910,67 @@ document.addEventListener("keydown", e => {
     }
   }
   
+  // Delete mode (D + L + T)
+// Delete mode (D + T)
+if (keys.has("d") && keys.has("t")) {
+  e.preventDefault();
+  deleteMode = true;
+  remoteMode = false;
+  sceneSelectionMode = false;
+  mode = "view";
+  updateDeleteModeIndicator();
+  updateRemoteModeIndicator();
+  updateSceneSelectionIndicator();
+  console.log("Delete mode ACTIVATED. Click on a remote or hotspot to delete it.");
+}
+  
+  // Add mode (N + B)
   if (keys.has("n") && keys.has("b")) {
     sceneSelectionMode = false;
-    updateSceneSelectionIndicator();
+    deleteMode = false;
     remoteMode = false;
+    updateSceneSelectionIndicator();
+    updateDeleteModeIndicator();
     updateRemoteModeIndicator();
     mode = "add";
   }
+  
+  // Move mode (M + E)
   if (keys.has("m") && keys.has("e")) {
     sceneSelectionMode = false;
-    updateSceneSelectionIndicator();
+    deleteMode = false;
     remoteMode = false;
+    updateSceneSelectionIndicator();
+    updateDeleteModeIndicator();
     updateRemoteModeIndicator();
     mode = "move";
   }
   
+  // Create scene (I + M + U)
   if (keys.has("i") && keys.has("m") && keys.has("u")) {
     e.preventDefault();
     openCreateSceneModal();
   }
   
+  // Manage scenes (I + M + R)
   if (keys.has("i") && keys.has("m") && keys.has("r")) {
     e.preventDefault();
     openManageSceneModal();
   }
   
+  // Save design (S + D)
   if (keys.has("s") && keys.has("d")) {
     e.preventDefault();
     saveDesignWithRemotes();
   }
   
+  // Load design (L + D)
   if (keys.has("l") && keys.has("d")) {
     e.preventDefault();
     openLoadDesignModal();
   }
   
+  // Sync with HA (S + Y)
   if (keys.has("s") && keys.has("y")) {
     e.preventDefault();
     RemoteModule.syncWithHA().then(result => {
@@ -979,6 +1023,15 @@ function setMouseFromEvent(e) {
   raycaster.setFromCamera(mouse, camera);
 }
 
+function updateDeleteModeIndicator() {
+  const indicator = document.getElementById('deleteModeIndicator');
+  if (deleteMode) {
+    indicator.classList.add('show');
+  } else {
+    indicator.classList.remove('show');
+  }
+}
+
 function handlePointerStart(e) {
   e.preventDefault();
   e.stopPropagation();
@@ -991,6 +1044,56 @@ function handlePointerStart(e) {
   startY = coords.clientY;
   
   setMouseFromEvent(e);
+
+  // DELETE MODE - Check for remotes and hotspots
+  if (deleteMode) {
+    // Check for remote containers first
+    const remoteContainers = Array.from(document.querySelectorAll('.remote-container')).filter(container => {
+      const rect = container.getBoundingClientRect();
+      const touchX = coords.clientX;
+      const touchY = coords.clientY;
+      
+      // Check if click is within the main button area
+      const mainButton = container.querySelector('.remote-main-button');
+      if (mainButton) {
+        const buttonRect = mainButton.getBoundingClientRect();
+        return touchX >= buttonRect.left && touchX <= buttonRect.right &&
+               touchY >= buttonRect.top && touchY <= buttonRect.bottom;
+      }
+      return false;
+    });
+    
+    if (remoteContainers.length > 0) {
+      const remoteId = remoteContainers[0].id;
+      if (confirm('Are you sure you want to delete this remote?')) {
+        RemoteModule.deleteRemote(remoteId);
+        console.log('Remote deleted:', remoteId);
+      }
+      isDown = false;
+      return;
+    }
+    
+    // Check for hotspots
+    const hit = raycaster.intersectObjects(hotspotMeshes);
+    if (hit.length) {
+      const hotspot = hit[0].object;
+      const hotspotIndex = hotspot.userData.index;
+      
+      if (confirm('Are you sure you want to delete this hotspot?')) {
+        // Remove from SCENES data
+        if (SCENES[currentScene] && SCENES[currentScene].hotspots[hotspotIndex]) {
+          SCENES[currentScene].hotspots.splice(hotspotIndex, 1);
+          
+          // Recreate hotspots without the deleted one
+          clearHotspots();
+          createHotspots(currentScene);
+          console.log('Hotspot deleted');
+        }
+      }
+      isDown = false;
+      return;
+    }
+  }
 
   if (remoteMode) {
     const hit = raycaster.intersectObject(activeSphere);
@@ -1010,7 +1113,7 @@ function handlePointerStart(e) {
     }
   }
 
-  if (mode === "view" && !sceneSelectionMode) {
+  if (mode === "view" && !sceneSelectionMode && !deleteMode) {
     const hit = raycaster.intersectObjects(hotspotMeshes);
     if (hit.length) {
       // Clear any pending navigation
@@ -1059,7 +1162,6 @@ function handlePointerStart(e) {
     }
   }
 }
-
 function handlePointerMove(e) {
   if (!isDown) return;
   e.preventDefault();
@@ -1427,6 +1529,16 @@ setInterval(() => {
 }, 30000);
 
 setInterval(updateHAStatus, 2000);
+// Add this to the RemoteModule public API (at the end of the return object)
+
+// Delete a remote by ID
+deleteRemote: (remoteId) => {
+  const container = document.getElementById(remoteId);
+  if (container) {
+    container.remove();
+  }
+  return remotesData.delete(remoteId);
+},
 
 document.addEventListener('DOMContentLoaded', function() {
   function updateRemoteButtons() {

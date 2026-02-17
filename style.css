@@ -1342,3 +1342,44 @@ canvas {
   flex-direction: column;
   width: 100%;
 }
+
+/* Delete Mode Indicator */
+.delete-mode-indicator {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 100;
+  display: none;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  max-width: 90%;
+  text-align: center;
+}
+
+.delete-mode-indicator.show {
+  display: block;
+}
+
+/* Add this to your style.css */
+body.modal-open {
+  touch-action: pan-y pinch-zoom; /* Allow only vertical panning and pinch zoom */
+  overflow: hidden;
+}
+
+body.modal-open canvas {
+  pointer-events: none; /* Disable 3D rotation when modal is open */
+}
+
+/* Ensure modal content remains interactive */
+.remote-modal.show,
+.remote-modal-content,
+.remote-modal * {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+}
