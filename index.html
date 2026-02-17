@@ -1139,6 +1139,8 @@ function animate() {
 
 /* ================== INIT ================== */
 
+/* ================== INIT ================== */
+
 function autoLoadData() {
   console.log('Auto-loading data.json on startup...');
   
@@ -1160,28 +1162,170 @@ function autoLoadData() {
         }
         
         if (!isValid) {
-          console.warn('Invalid data.json format, using default scenes');
+          console.warn('Invalid data.json format, loading default 360 view');
+          loadDefault360View();
         } else {
           SCENES = loadedData.scenes;
           currentScene = loadedData.currentScene || Object.keys(SCENES)[0];
           updateScenesList();
+          
+          if (loadedData.remotes && Array.isArray(loadedData.remotes)) {
+            RemoteModule.loadRemotes(loadedData.remotes);
+            RemoteModule.updateRemoteVisibility(currentScene);
+          }
+          
+          // OPTIMIZATION: Preload all scenes after loading
+          preloadAllScenes();
+          loadInitialScene();
         }
+      } else {
+        console.warn('No scenes in data.json, loading default 360 view');
+        loadDefault360View();
       }
-      
-      if (loadedData.remotes && Array.isArray(loadedData.remotes)) {
-        RemoteModule.loadRemotes(loadedData.remotes);
-        RemoteModule.updateRemoteVisibility(currentScene);
-      }
-      
-      // OPTIMIZATION: Preload all scenes after loading
-      preloadAllScenes();
-      loadInitialScene();
     })
     .catch(error => {
-      console.warn('Could not load data.json:', error.message, '- Using default scenes');
-      preloadAllScenes();
-      loadInitialScene();
+      console.warn('Could not load data.json:', error.message, '- Loading default 360 view');
+      loadDefault360View();
     });
+}
+
+function loadDefault360View() {
+  // Create a default scene with a 360 image
+  const defaultSceneKey = 'default';
+  const defaultImage = '360.jpg'; // Try to load existing 360.jpg
+  
+  // Check if 360.jpg exists, if not use a generated fallback
+  SCENES = {
+    default: {
+      image: defaultImage,
+      name: 'Default View',
+      hotspots: []
+    }
+  };
+  
+  currentScene = 'default';
+  updateScenesList();
+  
+  // Try to load the default image, if it fails create a colored fallback
+  loader.load(defaultImage, 
+    (tex) => {
+      // Success - image loaded
+      tex.colorSpace = THREE.SRGBColorSpace;
+      textureCache.set('default', tex);
+      activeSphere.material.map = tex;
+      activeSphere.material.needsUpdate = true;
+      createHotspots('default');
+      console.log('Default 360 image loaded successfully');
+    },
+    undefined,
+    (err) => {
+      // Failed to load image - create a gradient fallback
+      console.warn('Could not load 360.jpg, creating default gradient view');
+      createDefaultGradientSphere();
+    }
+  );
+  
+  RemoteModule.setCurrentScene('default');
+  updateScenesList();
+  animate();
+  
+  // Show a helpful message to the user
+  showDefaultViewMessage();
+}
+
+function createDefaultGradientSphere() {
+  // Create a canvas with a gradient pattern as fallback
+  const canvas = document.createElement('canvas');
+  canvas.width = 2048;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+  
+  // Create a gradient background
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  gradient.addColorStop(0, '#2c3e50');
+  gradient.addColorStop(0.25, '#3498db');
+  gradient.addColorStop(0.5, '#9b59b6');
+  gradient.addColorStop(0.75, '#e74c3c');
+  gradient.addColorStop(1, '#f1c40f');
+  
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Add grid pattern for orientation
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.lineWidth = 2;
+  
+  // Draw grid lines
+  for (let i = 0; i <= 8; i++) {
+    const x = (canvas.width / 8) * i;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  
+  for (let i = 0; i <= 4; i++) {
+    const y = (canvas.height / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+  
+  // Add text
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 60px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('360° VIEW', canvas.width/2, canvas.height/2 - 40);
+  
+  ctx.font = '40px Arial';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.fillText('No scene data found', canvas.width/2, canvas.height/2 + 40);
+  ctx.fillText('Use menu to create scenes', canvas.width/2, canvas.height/2 + 100);
+  
+  // Create texture from canvas
+  const fallbackTexture = new THREE.CanvasTexture(canvas);
+  fallbackTexture.colorSpace = THREE.SRGBColorSpace;
+  
+  textureCache.set('default', fallbackTexture);
+  activeSphere.material.map = fallbackTexture;
+  activeSphere.material.needsUpdate = true;
+  createHotspots('default');
+}
+
+function showDefaultViewMessage() {
+  // Create a temporary message
+  const messageDiv = document.createElement('div');
+  messageDiv.style.position = 'fixed';
+  messageDiv.style.bottom = '30px';
+  messageDiv.style.left = '50%';
+  messageDiv.style.transform = 'translateX(-50%)';
+  messageDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+  messageDiv.style.color = 'white';
+  messageDiv.style.padding = '15px 25px';
+  messageDiv.style.borderRadius = '8px';
+  messageDiv.style.zIndex = '1000';
+  messageDiv.style.fontSize = '16px';
+  messageDiv.style.textAlign = 'center';
+  messageDiv.style.border = '1px solid #42a5f5';
+  messageDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+  messageDiv.innerHTML = `
+    <i class="fas fa-info-circle" style="color: #42a5f5; margin-right: 10px;"></i>
+    No scene data found. Create a new scene using <strong>I+M+U</strong> or load a design with <strong>L+D</strong>
+  `;
+  
+  document.body.appendChild(messageDiv);
+  
+  // Auto-hide after 8 seconds
+  setTimeout(() => {
+    messageDiv.style.transition = 'opacity 0.5s';
+    messageDiv.style.opacity = '0';
+    setTimeout(() => {
+      if (messageDiv.parentNode) {
+        document.body.removeChild(messageDiv);
+      }
+    }, 500);
+  }, 8000);
 }
 
 function loadInitialScene() {
@@ -1200,15 +1344,21 @@ function loadInitialScene() {
         createHotspots(currentScene);
       }, undefined, (err) => {
         console.error('Failed to load initial scene:', err);
+        // If initial scene fails, try to load default
+        if (currentScene !== 'default') {
+          loadDefault360View();
+        }
       });
     }
+  } else {
+    // No valid scene, load default
+    loadDefault360View();
   }
   
   RemoteModule.setCurrentScene(currentScene);
   updateScenesList();
   animate();
 }
-
 (async function initHomeAssistant() {
   console.log('Auto-connecting to Home Assistant...');
   updateHAStatus();

@@ -1090,3 +1090,245 @@ canvas {
 .remote-modal.show {
   background-color: transparent;
 }
+
+/* Add these styles to your existing style.css file */
+
+/* Panel system */
+.remote-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.remote-panel.hidden {
+  display: none;
+}
+
+/* Control container */
+.remote-control-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  width: 100%;
+  min-height: 200px;
+  padding: 10px 0;
+}
+
+.remote-slider-unit {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.remote-slider-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+  text-align: center;
+  width: 100%;
+}
+
+.remote-dynamic-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3.5rem;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 1rem;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.remote-dynamic-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 6px;
+  height: 3.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: -20rem 0 0 20rem rgba(66, 165, 245, 0.5);
+  border-radius: 10px;
+}
+
+.remote-temp-slider {
+  background: linear-gradient(to right, #ffffff 0%, #f2d6a2 20%, #ffc561 40%, #f1ae3a 60%, #f1951d 80%, #f28900 100%);
+}
+
+.remote-temp-slider::-webkit-slider-thumb {
+  box-shadow: -20rem 0 0 20rem rgba(66, 165, 245, 0.3);
+}
+
+.remote-rgb-slider {
+  background: linear-gradient(to right, #ff0000 0%, #ffff00 16.66%, #00ff00 33.33%, #00ffff 50%, #0000ff 66.66%, #ff00ff 83.33%, #ff0000 100%);
+}
+
+.remote-control-value {
+  font-size: 15px;
+  color: #333;
+  text-align: center;
+  font-weight: 500;
+}
+
+.remote-toggle-placeholder {
+  font-size: 16px;
+  color: #555;
+  padding: 20px;
+  text-align: center;
+}
+
+/* Form select */
+.remote-form-select {
+  padding: 14px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  width: 100%;
+  touch-action: manipulation;
+  background-color: white;
+  position: relative;
+  z-index: 1;
+  cursor: pointer;
+}
+
+.remote-form-select:focus {
+  outline: none;
+  border-color: #FFC107;
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.3);
+}
+
+@media (max-width: 768px) {
+  .remote-form-select {
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  .remote-dynamic-slider {
+    height: 3rem;
+  }
+  
+  .remote-slider-label,
+  .remote-control-value {
+    font-size: 14px;
+  }
+}
+
+/* Fix for main button display */
+.remote-container .remote-main-button {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.remote-container:has(.remote-modal.show) .remote-main-button {
+  display: none !important;
+}
+
+/* Fallback */
+.remote-container .remote-modal.show ~ .remote-main-button {
+  display: none !important;
+}
+
+/* Default view message */
+.default-view-message {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  z-index: 1000;
+  font-size: 15px;
+  text-align: center;
+  border: 1px solid #42a5f5;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 90%;
+  line-height: 1.5;
+  animation: slideUp 0.3s ease;
+}
+
+.default-view-message i {
+  color: #42a5f5;
+  font-size: 24px;
+}
+
+.default-view-message strong {
+  color: #42a5f5;
+  font-weight: 600;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+/* Keyboard shortcut hint */
+.keyboard-hint {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 14px;
+  margin: 0 2px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Base slider styles - no fill by default */
+.remote-dynamic-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3.5rem;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 1rem;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.remote-dynamic-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 6px;
+  height: 3.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  box-shadow: none; /* No fill by default */
+}
+
+/* Brightness sliders - with blue fill */
+.remote-brightness-slider::-webkit-slider-thumb {
+  box-shadow: -20rem 0 0 20rem rgba(66, 165, 245, 0.5) !important;
+}
+
+/* Temperature slider - keep gradient but no fill */
+.remote-temp-slider {
+  background: linear-gradient(to right, #ffffff 0%, #f2d6a2 20%, #ffc561 40%, #f1ae3a 60%, #f1951d 80%, #f28900 100%);
+}
+
+.remote-temp-slider::-webkit-slider-thumb {
+  box-shadow: none !important;
+}
+
+/* RGB slider - keep rainbow but no fill */
+.remote-rgb-slider {
+  background: linear-gradient(to right, #ff0000 0%, #ffff00 16.66%, #00ff00 33.33%, #00ffff 50%, #0000ff 66.66%, #ff00ff 83.33%, #ff0000 100%);
+}
+
+.remote-rgb-slider::-webkit-slider-thumb {
+  box-shadow: none !important;
+}

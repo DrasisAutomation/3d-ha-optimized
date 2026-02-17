@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Switch Panel · fixed touch + back to grid</title>
+    <!-- Font Awesome 6 (free) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* === GLOBAL === */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .main-button {
+            width: 60px; height: 60px; background: white; border: none; border-radius: 8px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation; /* improve touch response */
+        }
+        .main-button:hover { transform: scale(1.05); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+        .main-button i { font-size: 24px; color: #333; }
+
+        /* === SINGLE MODAL – fixed size === */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .modal.show { display: flex; }
+
+        .modal-content {
+            background-color: white;
+            padding: 24px 20px;
+            border-radius: 12px;
+            width: 340px;
+            min-height: 300px;
+            max-height: 90vh;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            transition: none;
+        }
+
+        .close-btn {
+            position: absolute; top: 12px; right: 12px;
+            background: none; border: none; font-size: 20px; cursor: pointer; color: #666;
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            border-radius: 4px;
+            touch-action: manipulation;
+            z-index: 10;
+        }
+        .close-btn:hover { background-color: #f0f0f0; }
+
+        .modal-title {
+            text-align: center;
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* === PANELS (hidden/shown) === */
+        .panel {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            width: 100%;
+        }
+        .panel.hidden { display: none; }
+
+        /* switch grid */
+        .switch-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .switch-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .switch-button {
+            width: 64px; height: 64px; background: white; border: none; border-radius: 8px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.2s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .switch-button:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
+        .switch-button i { font-size: 24px; color: #333; }
+        .switch-button.active { background-color: #FFC107; box-shadow: 0 0 15px rgba(255,193,7,0.4); }
+        .switch-button.active i { color: white; }
+        .switch-label { font-size: 12px; color: #666; text-align: center; font-weight: 500; }
+
+        /* edit form */
+        .edit-form { display: flex; flex-direction: column; gap: 18px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-label { font-size: 14px; color: #333; font-weight: 600; }
+        .form-input, .form-select {
+            padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
+            touch-action: manipulation;
+        }
+        .icon-selection { border: 1px solid #ddd; border-radius: 6px; padding: 10px; max-height: 160px; overflow-y: auto; }
+        .icon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .icon-option { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border: 2px solid transparent; border-radius: 6px; cursor: pointer; touch-action: manipulation; }
+        .icon-option.selected { border-color: #FFC107; background-color: rgba(255,193,7,0.08); }
+        .icon-option i { font-size: 20px; }
+        .icon-name { font-size: 8px; }
+        .form-actions { display: flex; gap: 12px; margin-top: 8px; }
+        .form-btn {
+            flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;
+            touch-action: manipulation;
+        }
+        .form-btn.save { background-color: #FFC107; color: #333; }
+        .form-btn.cancel { background-color: #f0f0f0; color: #333; }
+
+        /* control panel – dynamic content, all centered */
+        .control-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 22px;
+            width: 100%;
+            flex: 1;
+            min-height: 200px;
+        }
+        .slider-unit {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .slider-label {
+            font-size: 15px; font-weight: 600; color: #222; text-align: center; width: 100%;
+        }
+        .dynamic-slider {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 3.5rem;
+            background-color: rgba(0,0,0,0.1); border-radius: 1rem; overflow: hidden; cursor: pointer;
+            touch-action: pan-y; /* allow vertical touch scroll but capture horizontal */
+        }
+        .dynamic-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 0; height: 3.5rem;
+            box-shadow: -20rem 0 0 20rem rgba(0,30,255,0.5);
+        }
+        .temp-slider {
+            background: linear-gradient(to right, #ffffff 0%, #f2d6a2 20%, #ffc561 40%, #f1ae3a 60%, #f1951d 80%, #f28900 100%);
+        }
+        .temp-slider::-webkit-slider-thumb {
+            width: 6px; height: 3.5rem; background: rgba(255,255,255,0.9); box-shadow: 0 0 8px black; border-radius: 10px;
+        }
+        .rgb-slider {
+            background: linear-gradient(to right, #ff0000 0%, #ffff00 16.66%, #00ff00 33.33%, #00ffff 50%, #0000ff 66.66%, #ff00ff 83.33%, #ff0000 100%);
+        }
+        .rgb-slider::-webkit-slider-thumb {
+            width: 6px; height: 3.5rem; background: rgba(255,255,255,0.9); box-shadow: 0 0 8px black; border-radius: 10px;
+        }
+        .control-value {
+            font-size: 15px; color: #333; text-align: center;
+        }
+        .toggle-placeholder { font-size: 16px; color: #555; padding: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+    <!-- main button -->
+    <button class="main-button" id="mainButton"><i class="fas fa-sliders-h"></i></button>
+
+    <!-- SINGLE MODAL – all panels inside -->
+    <div class="modal" id="mainModal">
+        <div class="modal-content">
+            <button class="close-btn" id="closeModalBtn"><i class="fas fa-times"></i></button>
+            
+            <!-- Panel 1: switch grid -->
+            <div id="panelSwitch" class="panel">
+                <div class="modal-title">Switch Panel</div>
+                <div class="switch-grid" id="switchGrid"></div>
+            </div>
+
+            <!-- Panel 2: edit form -->
+            <div id="panelEdit" class="panel hidden">
+                <div class="modal-title">Edit Switch</div>
+                <form class="edit-form" id="editForm">
+                    <div class="form-group">
+                        <label class="form-label">Name (8 max)</label>
+                        <input type="text" class="form-input" id="switchNameInput" maxlength="8" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Entity ID</label>
+                        <input type="text" class="form-input" id="entityIdInput" placeholder="light.bedroom" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Control type</label>
+                        <select class="form-select" id="controlTypeSelect">
+                            <option value="toggle">Toggle (on/off)</option>
+                            <option value="dimmer">Dimmer (brightness)</option>
+                            <option value="cct">CCT (brightness + temp)</option>
+                            <option value="rgb">RGB (brightness + hue)</option>
+                            <option value="curtain">Curtain (position)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Icon</label>
+                        <div class="icon-selection"><div class="icon-grid" id="iconGrid"></div></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="form-btn cancel" id="cancelEditBtn">Cancel</button>
+                        <button type="submit" class="form-btn save">Save</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Panel 3: dynamic control (dimmer, cct, rgb, curtain) -->
+            <div id="panelControl" class="panel hidden">
+                <div class="modal-title" id="controlModalTitle">Control</div>
+                <div class="control-container" id="controlContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ---------- HA CONFIG ----------
+        const HA_CONFIG = {
+            url: "https://demo.lumihomepro1.com",
+            token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI0OWU5NDM5ZWRjNWM0YTM4OTgzZmE5NzIyNjU0ZjY5MiIsImlhdCI6MTc2ODI5NjI1NSwiZXhwIjoyMDgzNjU2MjU1fQ.5C9sFe538kogRIL63dlwweBJldwhmQ7eoW86GEWls8U",
+            connected: false,
+            socket: null,
+            messageId: 1,
+            entityStates: new Map()   // entity_id -> {state, attributes}
+        };
+
+        // ---------- ICONS – expanded ----------
+        const ICONS = [
+            { class: 'fas fa-toggle-on', name: 'Toggle' },
+            { class: 'fas fa-toggle-off', name: 'ToggleOff' },
+            { class: 'fas fa-sliders-h', name: 'Sliders' },
+            { class: 'fa-solid fa-left-right', name: 'Arrow' },
+            { class: 'fa-solid fa-repeat', name: 'Repeat' },
+            { class: 'fa-solid fa-phone', name: 'Phone' },
+            { class: 'fas fa-lightbulb', name: 'Bulb-on' },
+            { class: 'fa-regular fa-lightbulb', name: 'Bulb-off' },
+            { class: 'fa-solid fa-menorah', name: 'DeskLamp' },
+            { class: 'fa-solid fa-fire-flame-curved', name: 'Flame' },
+            { class: 'fa-solid fa-laptop', name: 'Laptop' },
+            { class: 'fas fa-power-off', name: 'Power' },
+            { class: 'fas fa-plug', name: 'Plug' },
+            { class: 'fas fa-plug-circle-bolt', name: 'PlugBolt' },
+            { class: 'fas fa-battery-full', name: 'Battery' },
+            { class: 'fas fa-battery-quarter', name: 'BatteryLow' },
+            { class: 'fas fa-fan', name: 'Fan' },
+            { class: 'fas fa-wind', name: 'Wind' },
+            { class: 'fas fa-thermometer-half', name: 'Temp' },
+            { class: 'fas fa-thermometer-full', name: 'TempHot' },
+            { class: 'fas fa-thermometer-empty', name: 'TempCold' },
+            { class: 'fas fa-snowflake', name: 'Snow' },
+            { class: 'fas fa-fire', name: 'Fire' },
+            { class: 'fas fa-droplet', name: 'Humidity' },
+            { class: 'fas fa-tv', name: 'TV' },
+            { class: 'fa-brands fa-chromecast', name: 'Cast' },
+            { class: 'fa-solid fa-bullhorn', name: 'Speaker' },
+            { class: 'fas fa-volume-up', name: 'Volume' },
+            { class: 'fas fa-music', name: 'Music' },
+            { class: 'fas fa-headphones', name: 'Headphones' },
+            { class: 'fas fa-microphone', name: 'Mic' },
+            { class: 'fas fa-radio', name: 'Radio' },
+            { class: 'fa-solid fa-window-maximize', name: 'Blinds' },
+            { class: 'fa-regular fa-window-maximize', name: 'BlindsOpen' },
+            { class: 'fa-solid fa-person-booth', name: 'Curtain' },
+            { class: 'fas fa-window-maximize', name: 'Window' },
+            { class: 'fa-brands fa-microsoft', name: 'WindowMin' },
+            { class: 'fas fa-door-open', name: 'Door' },
+            { class: 'fas fa-door-closed', name: 'DoorClosed' },
+            { class: 'fas fa-lock', name: 'Lock' },
+            { class: 'fas fa-lock-open', name: 'Unlock' },
+            { class: 'fas fa-key', name: 'Key' },
+            { class: 'fas fa-camera', name: 'Camera' },
+            { class: 'fas fa-video', name: 'Video' },
+            { class: 'fas fa-bell', name: 'Bell' },
+            { class: 'fa-solid fa-bell-concierge', name: 'BellPlus' },
+            { class: 'fa-solid fa-square-parking', name: 'Parking' },
+            { class: 'fa-solid fa-car', name: 'GarageOpen' },
+            { class: 'fas fa-car', name: 'Car' },
+            { class: 'fas fa-truck', name: 'Truck' },
+            { class: 'fas fa-sun', name: 'Sun' },
+            { class: 'fas fa-moon', name: 'Moon' },
+            { class: 'fas fa-cloud', name: 'Cloud' },
+            { class: 'fas fa-cloud-rain', name: 'Rain' },
+            { class: 'fas fa-bolt', name: 'Bolt' },
+            { class: 'fas fa-umbrella', name: 'Umbrella' },
+            { class: 'fas fa-water', name: 'Water' },
+            { class: 'fas fa-wind', name: 'Breeze' },
+            { class: 'fas fa-robot', name: 'Robot' },
+            { class: 'fas fa-gamepad', name: 'Gamepad' },
+            { class: 'fas fa-desktop', name: 'Desktop' },
+            { class: 'fas fa-laptop', name: 'Laptop' },
+            { class: 'fas fa-mobile-alt', name: 'Mobile' },
+            { class: 'fas fa-tablet-alt', name: 'Tablet' },
+            { class: 'fas fa-wifi', name: 'WiFi' },
+            { class: 'fa-brands fa-bluetooth', name: 'BT' },
+            { class: 'fas fa-clock', name: 'Clock' },
+            { class: 'fas fa-calendar', name: 'Calendar' },
+            { class: 'fas fa-bed', name: 'Bed' },
+            { class: 'fas fa-couch', name: 'Couch' },
+            { class: 'fas fa-dumbbell', name: 'Gym' },
+            { class: 'fas fa-dog', name: 'Pet' },
+            { class: 'fas fa-cat', name: 'Cat' }
+        ];
+
+        // switches array
+        let switches = [
+            { name: "Light", icon: 'fas fa-lightbulb', entityId: "light.living_room", active: false, _lastToggle: 0, controlType: 'dimmer' },
+            { name: "TV", icon: 'fas fa-tv', entityId: "media_player.tv", active: false, _lastToggle: 0, controlType: 'toggle' },
+            { name: "Fan", icon: 'fas fa-fan', entityId: "fan.living_room", active: false, _lastToggle: 0, controlType: 'dimmer' },
+            { name: "Plug", icon: 'fas fa-plug', entityId: "switch.plug1", active: false, _lastToggle: 0, controlType: 'toggle' },
+            { name: "Curtain", icon: 'fas fa-curtain', entityId: "cover.living_room", active: false, _lastToggle: 0, controlType: 'curtain' },
+            { name: "CCT", icon: 'fas fa-sliders-h', entityId: "light.rgbw_1", active: false, _lastToggle: 0, controlType: 'cct' }
+        ];
+
+        // DOM elements
+        const mainModal = document.getElementById('mainModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const panelSwitch = document.getElementById('panelSwitch');
+        const panelEdit = document.getElementById('panelEdit');
+        const panelControl = document.getElementById('panelControl');
+        const switchGrid = document.getElementById('switchGrid');
+        const editForm = document.getElementById('editForm');
+        const switchNameInput = document.getElementById('switchNameInput');
+        const entityIdInput = document.getElementById('entityIdInput');
+        const controlTypeSelect = document.getElementById('controlTypeSelect');
+        const iconGrid = document.getElementById('iconGrid');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const controlContainer = document.getElementById('controlContainer');
+        const controlModalTitle = document.getElementById('controlModalTitle');
+
+        let currentEditIndex = -1;
+        let selectedIcon = 'fas fa-lightbulb';
+        let activeControlIndex = -1;
+
+        // ---------- init ----------
+        function init() {
+            populateIconGrid();
+            renderSwitches();
+            setupEventListeners();
+            connectToHA();
+        }
+
+        function populateIconGrid() {
+            iconGrid.innerHTML = '';
+            ICONS.forEach(icon => {
+                const div = document.createElement('div');
+                div.className = 'icon-option';
+                div.dataset.icon = icon.class;
+                div.innerHTML = `<i class="${icon.class}"></i><div class="icon-name">${icon.name}</div>`;
+                iconGrid.appendChild(div);
+                div.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.icon-option').forEach(opt => opt.classList.remove('selected'));
+                    div.classList.add('selected');
+                    selectedIcon = icon.class;
+                });
+            });
+        }
+
+        function renderSwitches() {
+            switchGrid.innerHTML = '';
+            switches.forEach((sw, idx) => {
+                const item = document.createElement('div');
+                item.className = 'switch-item';
+                const btn = document.createElement('button');
+                btn.className = `switch-button ${sw.active ? 'active' : ''}`;
+                btn.dataset.index = idx;
+                btn.innerHTML = `<i class="${sw.icon}" style="color:${sw.active?'white':'#333'}"></i>`;
+                const label = document.createElement('div');
+                label.className = 'switch-label';
+                label.textContent = sw.name;
+                item.appendChild(btn); item.appendChild(label);
+                switchGrid.appendChild(item);
+                setupSwitchEvents(btn, idx);
+            });
+        }
+
+        function setupSwitchEvents(btn, idx) {
+            let pressTimer;
+            const start = (e) => { 
+                e.preventDefault(); 
+                pressTimer = setTimeout(() => openEditPanel(idx), 500); // shorter for testing, but 1500 is fine
+            };
+            const clear = () => clearTimeout(pressTimer);
+            
+            // Use pointer events for better touch/mouse unification
+            btn.addEventListener('pointerdown', start);
+            btn.addEventListener('pointerup', clear);
+            btn.addEventListener('pointerleave', clear);
+            btn.addEventListener('pointercancel', clear);
+            
+            // Click is separate
+            btn.addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                handleSwitchClick(idx); 
+            });
+            
+            btn.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
+        function handleSwitchClick(index) {
+            const sw = switches[index];
+            if (!sw.entityId) return openEditPanel(index);
+            if (sw.controlType === 'toggle') {
+                toggleSwitch(index);
+            } else {
+                openControlPanel(index);
+            }
+        }
+
+        // open control panel (inside same modal)
+        function openControlPanel(index) {
+            activeControlIndex = index;
+            const sw = switches[index];
+            controlModalTitle.textContent = sw.name + ' control';
+            renderControlUI(sw);
+            panelSwitch.classList.add('hidden');
+            panelEdit.classList.add('hidden');
+            panelControl.classList.remove('hidden');
+        }
+
+        // open edit panel (long press)
+        function openEditPanel(index) {
+            currentEditIndex = index;
+            const sw = switches[index];
+            switchNameInput.value = sw.name;
+            entityIdInput.value = sw.entityId;
+            controlTypeSelect.value = sw.controlType || 'toggle';
+            selectedIcon = sw.icon;
+            document.querySelectorAll('.icon-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.dataset.icon === sw.icon) opt.classList.add('selected');
+            });
+            panelSwitch.classList.add('hidden');
+            panelControl.classList.add('hidden');
+            panelEdit.classList.remove('hidden');
+        }
+
+        // back to switch panel (called after cancel/save OR when close button is pressed in control/edit)
+        function showSwitchPanel() {
+            panelEdit.classList.add('hidden');
+            panelControl.classList.add('hidden');
+            panelSwitch.classList.remove('hidden');
+            activeControlIndex = -1;
+            currentEditIndex = -1;
+        }
+
+        // ---- HA helpers ----
+        function getEntityState(entityId) {
+            return HA_CONFIG.entityStates.get(entityId) || { state: '', attributes: {} };
+        }
+        function getBrightness(entityId) {
+            const ent = getEntityState(entityId);
+            if (ent.attributes && ent.attributes.brightness != null) {
+                return Math.round((ent.attributes.brightness / 255) * 100);
+            }
+            return 0;
+        }
+        function getCurtainPosition(entityId) {
+            const ent = getEntityState(entityId);
+            if (ent.attributes && ent.attributes.current_position != null) return ent.attributes.current_position;
+            return 0;
+        }
+        function getColorTemp(entityId) {
+            const ent = getEntityState(entityId);
+            if (ent.attributes && ent.attributes.color_temp != null) {
+                const minMireds = 153, maxMireds = 500;
+                let percent = (ent.attributes.color_temp - minMireds) / (maxMireds - minMireds) * 100;
+                return Math.min(100, Math.max(0, Math.round(percent)));
+            }
+            return 50;
+        }
+        function getHue(entityId) {
+            const ent = getEntityState(entityId);
+            if (ent.attributes && ent.attributes.hs_color && ent.attributes.hs_color[0] != null) return Math.round(ent.attributes.hs_color[0]);
+            return 0;
+        }
+
+        function renderControlUI(sw) {
+            const type = sw.controlType;
+            let html = '';
+            if (type === 'dimmer') {
+                let b = getBrightness(sw.entityId);
+                html = `<div class="slider-unit"><span class="slider-label">Brightness</span>
+                    <input type="range" min="0" max="100" value="${b}" class="dynamic-slider" id="dimmerSlider">
+                    <div class="control-value" id="dimmerValue">${b}%</div></div>`;
+            } else if (type === 'cct') {
+                let b = getBrightness(sw.entityId);
+                let t = getColorTemp(sw.entityId);
+                let kelvin = Math.round(6500 - (t/100)*(6500-2000));
+                html = `<div class="slider-unit"><span class="slider-label">Brightness</span>
+                    <input type="range" min="0" max="100" value="${b}" class="dynamic-slider" id="cctBrightSlider">
+                    <div class="control-value" id="cctBrightValue">${b}%</div></div>
+                    <div class="slider-unit"><span class="slider-label">Color temp</span>
+                    <input type="range" min="0" max="100" value="${t}" class="dynamic-slider temp-slider" id="cctTempSlider">
+                    <div class="control-value" id="cctTempValue">${kelvin}K</div></div>`;
+            } else if (type === 'rgb') {
+                let b = getBrightness(sw.entityId);
+                let h = getHue(sw.entityId);
+                html = `<div class="slider-unit"><span class="slider-label">Brightness</span>
+                    <input type="range" min="0" max="100" value="${b}" class="dynamic-slider" id="rgbBrightSlider">
+                    <div class="control-value" id="rgbBrightValue">${b}%</div></div>
+                    <div class="slider-unit"><span class="slider-label">Hue</span>
+                    <input type="range" min="0" max="360" value="${h}" class="dynamic-slider rgb-slider" id="rgbHueSlider">
+                    <div class="control-value" id="rgbHueValue">Hue ${h}°</div></div>`;
+            } else if (type === 'curtain') {
+                let pos = getCurtainPosition(sw.entityId);
+                html = `<div class="slider-unit"><span class="slider-label">Position</span>
+                    <input type="range" min="0" max="100" value="${pos}" class="dynamic-slider" id="curtainSlider">
+                    <div class="control-value" id="curtainValue">${pos}%</div></div>`;
+            } else {
+                html = '<div class="toggle-placeholder">Toggle mode</div>';
+            }
+            controlContainer.innerHTML = html;
+            attachControlEvents(type, sw);
+        }
+
+        function attachControlEvents(type, sw) {
+            if (type === 'dimmer') {
+                const s = document.getElementById('dimmerSlider');
+                const v = document.getElementById('dimmerValue');
+                if (s) {
+                    s.addEventListener('input', (e) => v.textContent = e.target.value + '%');
+                    s.addEventListener('change', (e) => {
+                        let val = parseInt(e.target.value);
+                        callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: val });
+                    });
+                }
+            }
+            if (type === 'cct') {
+                const bs = document.getElementById('cctBrightSlider');
+                const bv = document.getElementById('cctBrightValue');
+                if (bs) {
+                    bs.addEventListener('input', (e) => bv.textContent = e.target.value + '%');
+                    bs.addEventListener('change', (e) => {
+                        callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: parseInt(e.target.value) });
+                    });
+                }
+                const ts = document.getElementById('cctTempSlider');
+                const tv = document.getElementById('cctTempValue');
+                if (ts) {
+                    const updateTemp = (val) => { let k = Math.round(6500 - (val/100)*(6500-2000)); tv.textContent = k+'K'; };
+                    ts.addEventListener('input', (e) => updateTemp(e.target.value));
+                    ts.addEventListener('change', (e) => {
+                        let mireds = Math.round(153 + (500-153)*(e.target.value/100));
+                        callService('light', 'turn_on', { entity_id: sw.entityId, color_temp: mireds });
+                    });
+                }
+            }
+            if (type === 'rgb') {
+                const bs = document.getElementById('rgbBrightSlider');
+                const bv = document.getElementById('rgbBrightValue');
+                if (bs) {
+                    bs.addEventListener('input', (e) => bv.textContent = e.target.value+'%');
+                    bs.addEventListener('change', (e) => {
+                        callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: parseInt(e.target.value) });
+                    });
+                }
+                const hs = document.getElementById('rgbHueSlider');
+                const hv = document.getElementById('rgbHueValue');
+                if (hs) {
+                    hs.addEventListener('input', (e) => hv.textContent = `Hue ${e.target.value}°`);
+                    hs.addEventListener('change', (e) => {
+                        let h = parseInt(e.target.value);
+                        callService('light', 'turn_on', { entity_id: sw.entityId, hs_color: [h, 100] });
+                    });
+                }
+            }
+            if (type === 'curtain') {
+                const s = document.getElementById('curtainSlider');
+                const v = document.getElementById('curtainValue');
+                if (s) {
+                    s.addEventListener('input', (e) => v.textContent = e.target.value+'%');
+                    s.addEventListener('change', (e) => {
+                        callService('cover', 'set_cover_position', { entity_id: sw.entityId, position: parseInt(e.target.value) });
+                    });
+                }
+            }
+        }
+
+        function callService(domain, service, data) {
+            if (!HA_CONFIG.connected || !HA_CONFIG.socket) return;
+            HA_CONFIG.socket.send(JSON.stringify({
+                id: HA_CONFIG.messageId++,
+                type: 'call_service',
+                domain, service,
+                service_data: data
+            }));
+        }
+
+        async function toggleSwitch(index) {
+            const sw = switches[index];
+            if (!sw.entityId) return openEditPanel(index);
+            const now = Date.now();
+            if (sw._lastToggle && (now - sw._lastToggle) < 500) return;
+            const current = sw.active;
+            sw.active = !current;
+            renderSwitches();
+            try {
+                if (HA_CONFIG.connected && HA_CONFIG.socket) {
+                    const domain = sw.entityId.split('.')[0];
+                    callService(domain, 'toggle', { entity_id: sw.entityId });
+                    sw._lastToggle = Date.now();
+                } else { sw.active = current; renderSwitches(); }
+            } catch { sw.active = current; renderSwitches(); }
+        }
+
+        // ---------- HA WebSocket ----------
+        function connectToHA() {
+            const wsUrl = 'wss://demo.lumihomepro1.com/api/websocket';
+            HA_CONFIG.socket = new WebSocket(wsUrl);
+            HA_CONFIG.socket.onopen = () => HA_CONFIG.socket.send(JSON.stringify({type:'auth', access_token:HA_CONFIG.token}));
+            HA_CONFIG.socket.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'auth_ok') {
+                    HA_CONFIG.connected = true;
+                    HA_CONFIG.socket.send(JSON.stringify({id: HA_CONFIG.messageId++, type:'get_states'}));
+                    HA_CONFIG.socket.send(JSON.stringify({id: HA_CONFIG.messageId++, type:'subscribe_events', event_type:'state_changed'}));
+                }
+                else if (msg.type === 'result' && msg.id === 1) {
+                    if (msg.result) {
+                        msg.result.forEach(ent => HA_CONFIG.entityStates.set(ent.entity_id, ent));
+                        updateSwitchesFromHA();
+                    }
+                }
+                else if (msg.type === 'event' && msg.event?.event_type === 'state_changed') {
+                    const { entity_id, new_state } = msg.event.data;
+                    if (new_state) {
+                        HA_CONFIG.entityStates.set(entity_id, new_state);
+                        updateSwitchesFromHA();
+                        if (activeControlIndex !== -1 && switches[activeControlIndex]?.entityId === entity_id) {
+                            renderControlUI(switches[activeControlIndex]);
+                        }
+                    }
+                }
+            };
+            HA_CONFIG.socket.onclose = () => { HA_CONFIG.connected = false; setTimeout(connectToHA,3000); };
+        }
+
+        function updateSwitchesFromHA() {
+            switches.forEach((sw, idx) => {
+                const ha = HA_CONFIG.entityStates.get(sw.entityId);
+                if (ha) {
+                    sw.active = (ha.state === 'on' || ha.state === 'open' || ha.state === 'true');
+                }
+            });
+            renderSwitches();
+        }
+
+        // ---------- event listeners ----------
+        function setupEventListeners() {
+            mainButton.addEventListener('click', () => {
+                showSwitchPanel();
+                mainModal.classList.add('show');
+            });
+
+            // Close button now returns to switch panel if in edit or control, otherwise closes modal
+            closeModalBtn.addEventListener('click', () => {
+                if (!panelSwitch.classList.contains('hidden')) {
+                    // we are on main grid → close modal
+                    mainModal.classList.remove('show');
+                } else {
+                    // we are in edit or control → go back to switch panel
+                    showSwitchPanel();
+                }
+            });
+
+            cancelEditBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                showSwitchPanel();
+            });
+
+            editForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (currentEditIndex === -1) return;
+                const name = switchNameInput.value.trim().substring(0,8);
+                const entityId = entityIdInput.value.trim();
+                const ctrlType = controlTypeSelect.value;
+                if (!name || !entityId) return;
+                switches[currentEditIndex] = {
+                    ...switches[currentEditIndex],
+                    name, entityId, icon: selectedIcon,
+                    controlType: ctrlType,
+                    active: false, _lastToggle: 0
+                };
+                renderSwitches();
+                showSwitchPanel();
+            });
+
+            window.addEventListener('click', (e) => {
+                if (e.target === mainModal) {
+                    mainModal.classList.remove('show');
+                    showSwitchPanel();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && mainModal.classList.contains('show')) {
+                    mainModal.classList.remove('show');
+                    showSwitchPanel();
+                }
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
