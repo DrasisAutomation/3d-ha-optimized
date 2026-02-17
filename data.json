@@ -125,7 +125,7 @@
           "name": "Tremblay",
           "icon": "fas fa-sliders-h",
           "entityId": "light.rgbw_1",
-          "active": true,
+          "active": false,
           "controlType": "rgb"
         },
         {
@@ -171,14 +171,14 @@
           "name": "Switch 2",
           "icon": "fas fa-lightbulb",
           "entityId": "switch.node_89_2",
-          "active": false,
+          "active": true,
           "controlType": "toggle"
         },
         {
           "name": "Switch 3",
           "icon": "fas fa-power-off",
           "entityId": "switch.node_89_3",
-          "active": false,
+          "active": true,
           "controlType": "toggle"
         },
         {
@@ -192,15 +192,15 @@
           "name": "Switch 5",
           "icon": "fas fa-tv",
           "entityId": "switch.ht_2",
-          "active": true,
+          "active": false,
           "controlType": "toggle"
         },
         {
-          "name": "Switch 6",
-          "icon": "fas fa-fan",
-          "entityId": "switch.ht_2_2",
-          "active": true,
-          "controlType": "toggle"
+          "name": "RGB",
+          "icon": "fas fa-sliders-h",
+          "entityId": "light.rgbw_1",
+          "active": false,
+          "controlType": "rgb"
         }
       ]
     },
@@ -228,32 +228,32 @@
           "controlType": "toggle"
         },
         {
-          "name": "Switch 3",
-          "icon": "fas fa-power-off",
+          "name": "Panel",
+          "icon": "fas fa-lightbulb",
           "entityId": "switch.pantry_r3",
           "active": false,
           "controlType": "toggle"
         },
         {
-          "name": "Switch 4",
-          "icon": "fas fa-plug",
-          "entityId": "light.pantry_light1",
+          "name": "Tube LT",
+          "icon": "fas fa-lightbulb",
+          "entityId": "switch.pantry_r1",
           "active": false,
           "controlType": "toggle"
         },
         {
-          "name": "Switch 5",
-          "icon": "fas fa-tv",
-          "entityId": "light.pantry_light2",
+          "name": "Sun LT",
+          "icon": "fas fa-sun",
+          "entityId": "light.pantry_light10",
           "active": false,
           "controlType": "toggle"
         },
         {
-          "name": "Switch 6",
-          "icon": "fas fa-fan",
-          "entityId": "light.pantry_light3",
-          "active": false,
-          "controlType": "toggle"
+          "name": "CCT LT",
+          "icon": "fas fa-sliders-h",
+          "entityId": "light.pantry_cct_lighr_exp_room_entrance_light",
+          "active": true,
+          "controlType": "cct"
         }
       ]
     },
@@ -288,25 +288,25 @@
           "controlType": "toggle"
         },
         {
-          "name": "Switch 4",
+          "name": "Spot",
           "icon": "fas fa-lightbulb",
           "entityId": "switch.exproom_lumi_2ch_r4",
-          "active": false,
-          "controlType": "toggle"
-        },
-        {
-          "name": "spot",
-          "icon": "fas fa-tv",
-          "entityId": "light.exp_room_light_2_light",
-          "active": false,
-          "controlType": "toggle"
-        },
-        {
-          "name": "Switch 6",
-          "icon": "fas fa-fan",
-          "entityId": "light.exp_room_light3_light",
           "active": true,
           "controlType": "toggle"
+        },
+        {
+          "name": "CCT LT",
+          "icon": "fas fa-sliders-h",
+          "entityId": "light.exp_room_light3_light",
+          "active": true,
+          "controlType": "cct"
+        },
+        {
+          "name": "Curtain",
+          "icon": "fa-solid fa-person-booth",
+          "entityId": "cover.exp_room_curtain_outbound_bottom",
+          "active": false,
+          "controlType": "curtain"
         }
       ]
     }

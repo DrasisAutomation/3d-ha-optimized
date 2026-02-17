@@ -558,59 +558,124 @@ const RemoteModule = (() => {
     });
   };
 
-  // Setup event listeners for a switch (from test.html)
-  const setupSwitchEventListeners = (switchBtn, index, switchesData, remoteId) => {
-    const LONG_PRESS_DURATION = 500; // 500ms for testing (was 1500)
-    let pressTimer = null;
-    let isLongPress = false;
+// Setup event listeners for a switch (from test.html) - FIXED for mobile
+const setupSwitchEventListeners = (switchBtn, index, switchesData, remoteId) => {
+  const LONG_PRESS_DURATION = 500; // 500ms for long press
+  let pressTimer = null;
+  let isLongPress = false;
+  let touchStartTime = 0;
+  let touchMoved = false;
+  let startX = 0, startY = 0;
 
-    // Pointer events for better touch/mouse unification (from test.html)
-    const start = (e) => {
-      e.preventDefault();
-      pressTimer = setTimeout(() => {
+  // Mouse events for desktop
+  switchBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    pressTimer = setTimeout(() => {
+      isLongPress = true;
+      openEditPanel(index, remoteId);
+    }, LONG_PRESS_DURATION);
+  });
+
+  switchBtn.addEventListener('mouseup', (e) => {
+    e.preventDefault();
+    clearTimeout(pressTimer);
+    
+    if (!isLongPress) {
+      handleSwitchClick(index, remoteId);
+    }
+    isLongPress = false;
+  });
+
+  switchBtn.addEventListener('mouseleave', () => {
+    clearTimeout(pressTimer);
+    isLongPress = false;
+  });
+
+  // Touch events for mobile
+  switchBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const touch = e.touches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+    touchStartTime = Date.now();
+    touchMoved = false;
+    
+    pressTimer = setTimeout(() => {
+      if (!touchMoved) {
         isLongPress = true;
         openEditPanel(index, remoteId);
-      }, LONG_PRESS_DURATION);
-    };
-    
-    const clear = () => {
-      clearTimeout(pressTimer);
-    };
-    
-    // Use pointer events
-    switchBtn.addEventListener('pointerdown', start);
-    switchBtn.addEventListener('pointerup', clear);
-    switchBtn.addEventListener('pointerleave', clear);
-    switchBtn.addEventListener('pointercancel', clear);
-    
-    // Click is separate
-    switchBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      
-      if (!isLongPress) {
-        handleSwitchClick(index, remoteId);
       }
-      isLongPress = false;
-    });
-    
-    switchBtn.addEventListener('contextmenu', e => e.preventDefault());
-  };
+    }, LONG_PRESS_DURATION);
+  });
 
-  // Handle switch click (from test.html)
-  const handleSwitchClick = (index, remoteId) => {
-    const remoteData = remotesData.get(remoteId);
-    if (!remoteData) return;
+  switchBtn.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     
-    const sw = remoteData.switches[index];
-    if (!sw.entityId) return openEditPanel(index, remoteId);
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - startX);
+    const deltaY = Math.abs(touch.clientY - startY);
     
-    if (sw.controlType === 'toggle') {
-      toggleSwitch(index, remoteId);
-    } else {
-      openControlPanel(index, remoteId);
+    // If moved more than 10px, consider it a scroll/move not a tap
+    if (deltaX > 10 || deltaY > 10) {
+      touchMoved = true;
+      clearTimeout(pressTimer);
     }
-  };
+  });
+
+  switchBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    clearTimeout(pressTimer);
+    
+    const touchEndTime = Date.now();
+    const touchDuration = touchEndTime - touchStartTime;
+    
+    // Only trigger click if it was a quick tap (less than 300ms) and no movement
+    if (!isLongPress && !touchMoved && touchDuration < 300) {
+      handleSwitchClick(index, remoteId);
+    }
+    
+    isLongPress = false;
+    touchMoved = false;
+  });
+
+  switchBtn.addEventListener('touchcancel', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    clearTimeout(pressTimer);
+    isLongPress = false;
+    touchMoved = false;
+  });
+
+  // Prevent context menu on long press
+  switchBtn.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    return false;
+  });
+};
+// Handle switch click (from test.html) - FIXED for mobile
+const handleSwitchClick = (index, remoteId) => {
+  const remoteData = remotesData.get(remoteId);
+  if (!remoteData) return;
+  
+  const sw = remoteData.switches[index];
+  
+  // If no entity ID, open edit panel
+  if (!sw.entityId || sw.entityId.trim() === '') {
+    openEditPanel(index, remoteId);
+    return;
+  }
+  
+  if (sw.controlType === 'toggle') {
+    toggleSwitch(index, remoteId);
+  } else {
+    openControlPanel(index, remoteId);
+  }
+};
 
   // Open control panel (from test.html)
   const openControlPanel = (index, remoteId) => {
@@ -819,40 +884,43 @@ const attachControlEvents = (type, sw, remoteId) => {
   }
 };
 
-  // Toggle switch (from test.html)
-  const toggleSwitch = async (index, remoteId) => {
-    const remoteData = remotesData.get(remoteId);
-    if (!remoteData) return;
-    
-    const sw = remoteData.switches[index];
-    
-    if (!sw.entityId) {
-      openEditPanel(index, remoteId);
-      return;
-    }
-    
-    const now = Date.now();
-    if (sw._lastToggle && (now - sw._lastToggle) < 500) return;
-    
-    const current = sw.active;
-    sw.active = !current;
-    updateSwitchVisualState(remoteId, index, sw.active);
-    
-    try {
-      if (HA_CONFIG.connected && HA_CONFIG.socket) {
-        const domain = sw.entityId.split('.')[0];
-        callService(domain, 'toggle', { entity_id: sw.entityId });
-        sw._lastToggle = Date.now();
-      } else {
-        sw.active = current;
-        updateSwitchVisualState(remoteId, index, current);
-      }
-    } catch {
+// Toggle switch (from test.html) - FIXED
+const toggleSwitch = async (index, remoteId) => {
+  const remoteData = remotesData.get(remoteId);
+  if (!remoteData) return;
+  
+  const sw = remoteData.switches[index];
+  
+  // If no entity ID, open edit panel
+  if (!sw.entityId || sw.entityId.trim() === '') {
+    openEditPanel(index, remoteId);
+    return;
+  }
+  
+  const now = Date.now();
+  if (sw._lastToggle && (now - sw._lastToggle) < 500) return;
+  
+  const current = sw.active;
+  
+  // Optimistic update
+  sw.active = !current;
+  updateSwitchVisualState(remoteId, index, sw.active);
+  
+  try {
+    if (HA_CONFIG.connected && HA_CONFIG.socket) {
+      const domain = sw.entityId.split('.')[0];
+      callService(domain, 'toggle', { entity_id: sw.entityId });
+      sw._lastToggle = Date.now();
+    } else {
+      // If not connected, revert
       sw.active = current;
       updateSwitchVisualState(remoteId, index, current);
     }
-  };
-
+  } catch {
+    sw.active = current;
+    updateSwitchVisualState(remoteId, index, current);
+  }
+};
   // Open edit panel (from test.html)
   const openEditPanel = (index, remoteId) => {
     const remoteData = remotesData.get(remoteId);
@@ -936,19 +1004,38 @@ const attachControlEvents = (type, sw, remoteId) => {
     });
 
     // Close button - returns to switch panel if in edit/control, otherwise closes modal
-    closeModalBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      
-      if (!panelSwitch.classList.contains('hidden')) {
-        // On main grid → close modal
-        modal.classList.remove('show');
-        mainButton.classList.remove('active-main');
-        mainButton.style.display = 'flex';
-      } else {
-        // In edit or control → go back to switch panel
-        showSwitchPanel(id);
-      }
-    });
+// Close button - returns to switch panel if in edit/control, otherwise closes modal
+closeModalBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  
+  if (!panelSwitch.classList.contains('hidden')) {
+    // On main grid → close modal
+    modal.classList.remove('show');
+    mainButton.classList.remove('active-main');
+    mainButton.style.display = 'flex';
+  } else {
+    // In edit or control → go back to switch panel
+    showSwitchPanel(id);
+  }
+});
+
+closeModalBtn.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+closeModalBtn.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  if (!panelSwitch.classList.contains('hidden')) {
+    modal.classList.remove('show');
+    mainButton.classList.remove('active-main');
+    mainButton.style.display = 'flex';
+  } else {
+    showSwitchPanel(id);
+  }
+});
 
     closeModalBtn.addEventListener('touchend', (e) => {
       e.stopPropagation();
