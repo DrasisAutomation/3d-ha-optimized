@@ -1332,3 +1332,13 @@ canvas {
 .remote-rgb-slider::-webkit-slider-thumb {
   box-shadow: none !important;
 }
+/* Add to your style.css */
+.remote-panel.hidden {
+  display: none !important;
+}
+
+.remote-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}

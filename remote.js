@@ -962,24 +962,37 @@ const toggleSwitch = async (index, remoteId) => {
     }, 100);
   };
 
-  // Show switch panel (from test.html)
-  const showSwitchPanel = (remoteId) => {
-    const panelSwitch = document.getElementById(`${remoteId}-panelSwitch`);
-    const panelEdit = document.getElementById(`${remoteId}-panelEdit`);
-    const panelControl = document.getElementById(`${remoteId}-panelControl`);
-    
-    if (panelSwitch && panelEdit && panelControl) {
-      panelEdit.classList.add('hidden');
-      panelControl.classList.add('hidden');
-      panelSwitch.classList.remove('hidden');
-    }
-    
-    activeControlIndex = -1;
-    currentEditIndex = -1;
-  };
+// Show switch panel (from test.html) - FIXED
+const showSwitchPanel = (remoteId) => {
+  console.log('Showing switch panel for:', remoteId); // Debug log
+  
+  const panelSwitch = document.getElementById(`${remoteId}-panelSwitch`);
+  const panelEdit = document.getElementById(`${remoteId}-panelEdit`);
+  const panelControl = document.getElementById(`${remoteId}-panelControl`);
+  const modal = document.getElementById(`${remoteId}-modal`);
+  const mainButton = document.getElementById(`${remoteId}-mainButton`);
+  
+  if (panelSwitch && panelEdit && panelControl) {
+    // Hide edit and control panels
+    panelEdit.classList.add('hidden');
+    panelControl.classList.add('hidden');
+    // Show switch panel
+    panelSwitch.classList.remove('hidden');
+    console.log('Switch panel should now be visible');
+  }
+  
+  // Don't close the modal, just show the switch panel
+  if (modal && modal.classList.contains('show')) {
+    // Keep modal open
+    console.log('Modal remains open');
+  }
+  
+  activeControlIndex = -1;
+  currentEditIndex = -1;
+};
 
-  // Setup event listeners for a remote instance
-  const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl, 
+// Also update the close button handlers in setupEventListeners
+const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl, 
                              mainButton, closeModalBtn, cancelEditBtn, editForm, 
                              switchNameInput, entityIdInput, controlTypeSelect, 
                              switchGrid, iconGrid, remoteData) => {
@@ -1003,63 +1016,50 @@ const toggleSwitch = async (index, remoteId) => {
       mainButton.style.display = 'none';
     });
 
-    // Close button - returns to switch panel if in edit/control, otherwise closes modal
-// Close button - returns to switch panel if in edit/control, otherwise closes modal
-closeModalBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  
-  if (!panelSwitch.classList.contains('hidden')) {
-    // On main grid → close modal
-    modal.classList.remove('show');
-    mainButton.classList.remove('active-main');
-    mainButton.style.display = 'flex';
-  } else {
-    // In edit or control → go back to switch panel
-    showSwitchPanel(id);
-  }
-});
-
-closeModalBtn.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-});
-
-closeModalBtn.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  
-  if (!panelSwitch.classList.contains('hidden')) {
-    modal.classList.remove('show');
-    mainButton.classList.remove('active-main');
-    mainButton.style.display = 'flex';
-  } else {
-    showSwitchPanel(id);
-  }
-});
-
-    closeModalBtn.addEventListener('touchend', (e) => {
-      e.stopPropagation();
+    // Close button - FIXED for mobile
+    const handleCloseButton = (e) => {
       e.preventDefault();
+      e.stopPropagation();
       
+      console.log('Close button clicked'); // Debug log
+      
+      // Check which panel is visible
       if (!panelSwitch.classList.contains('hidden')) {
+        // On main grid → close modal
+        console.log('Closing modal');
         modal.classList.remove('show');
         mainButton.classList.remove('active-main');
         mainButton.style.display = 'flex';
       } else {
+        // In edit or control → go back to switch panel
+        console.log('Going back to switch panel');
         showSwitchPanel(id);
       }
-    });
+    };
 
-    // Cancel edit
-    cancelEditBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      showSwitchPanel(id);
-    });
-
-    cancelEditBtn.addEventListener('touchend', (e) => {
+    closeModalBtn.addEventListener('click', handleCloseButton);
+    closeModalBtn.addEventListener('touchend', handleCloseButton);
+    
+    // Prevent touchstart from triggering other events
+    closeModalBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
       e.stopPropagation();
+    });
+
+    // Cancel edit button - FIXED
+    const handleCancelEdit = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Cancel edit clicked');
       showSwitchPanel(id);
+    };
+
+    cancelEditBtn.addEventListener('click', handleCancelEdit);
+    cancelEditBtn.addEventListener('touchend', handleCancelEdit);
+    
+    cancelEditBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
     });
 
     // Save edit
@@ -1113,33 +1113,37 @@ closeModalBtn.addEventListener('touchend', (e) => {
       });
     });
 
-    // Close modals when clicking outside
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        modal.classList.remove('show');
-        mainButton.classList.remove('active-main');
-        mainButton.style.display = 'flex';
-        showSwitchPanel(id);
-      }
-    });
-
-    modal.addEventListener('touchend', (e) => {
+    // Close modals when clicking outside - FIXED
+    const handleOutsideClick = (e) => {
       if (e.target === modal) {
         e.preventDefault();
-        modal.classList.remove('show');
-        mainButton.classList.remove('active-main');
-        mainButton.style.display = 'flex';
-        showSwitchPanel(id);
+        e.stopPropagation();
+        
+        if (!panelSwitch.classList.contains('hidden')) {
+          // On main grid → close modal
+          modal.classList.remove('show');
+          mainButton.classList.remove('active-main');
+          mainButton.style.display = 'flex';
+        } else {
+          // In edit or control → go back to switch panel
+          showSwitchPanel(id);
+        }
       }
-    });
+    };
+
+    modal.addEventListener('click', handleOutsideClick);
+    modal.addEventListener('touchend', handleOutsideClick);
 
     // Close with Escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && modal.classList.contains('show')) {
-        modal.classList.remove('show');
-        mainButton.classList.remove('active-main');
-        mainButton.style.display = 'flex';
-        showSwitchPanel(id);
+        if (!panelSwitch.classList.contains('hidden')) {
+          modal.classList.remove('show');
+          mainButton.classList.remove('active-main');
+          mainButton.style.display = 'flex';
+        } else {
+          showSwitchPanel(id);
+        }
       }
     });
   };
