@@ -1481,3 +1481,7 @@ body.remote-modal-active canvas {
 .remote-modal.show .remote-icon-option {
   touch-action: pan-y pinch-zoom !important; /* Allow vertical scroll but capture horizontal for sliders */
 }
+
+.remote-modal{
+  background-color: transparent !important;
+}
