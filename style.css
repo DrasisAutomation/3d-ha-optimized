@@ -1383,3 +1383,101 @@ body.modal-open canvas {
   pointer-events: auto !important;
   touch-action: auto !important;
 }
+
+/* Add these styles to your style.css */
+
+/* When any remote modal is open, disable all canvas interactions */
+body.remote-modal-active {
+  touch-action: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  overflow: hidden !important;
+}
+
+body.remote-modal-active canvas {
+  pointer-events: none !important;
+  touch-action: none !important;
+}
+
+/* Ensure modal and its content are fully interactive */
+.remote-modal {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+  z-index: 2000;
+}
+
+.remote-modal-content {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+}
+
+/* Prevent any event propagation from modal background to canvas */
+.remote-modal.show {
+  background-color: rgba(0, 0, 0, 0.5);
+  pointer-events: auto !important;
+}
+
+/* Ensure all modal children are interactive */
+.remote-modal * {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+}
+
+/* Add a transparent overlay to catch stray touches */
+.remote-modal.show::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* When any remote modal is open, allow canvas interaction but prevent it from stealing slider touches */
+body.remote-modal-active canvas {
+  pointer-events: auto; /* Allow canvas interaction */
+}
+
+/* Ensure modal content captures all touches inside it */
+.remote-modal {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+  z-index: 2000;
+}
+
+.remote-modal-content {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+}
+
+/* Make the modal background transparent but still capture touches */
+.remote-modal.show {
+  background-color: rgba(0, 0, 0, 0.5);
+  pointer-events: auto !important;
+}
+
+/* Ensure all modal children are interactive */
+.remote-modal * {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+}
+
+/* Prevent touches on modal from reaching canvas */
+.remote-modal.show {
+  touch-action: none; /* Prevent default touch actions on modal background */
+}
+
+/* Allow touch actions on interactive elements inside modal */
+.remote-modal.show .remote-dynamic-slider,
+.remote-modal.show .remote-switch-button,
+.remote-modal.show .remote-close-btn,
+.remote-modal.show .remote-form-btn,
+.remote-modal.show .remote-form-input,
+.remote-modal.show .remote-form-select,
+.remote-modal.show .remote-icon-option {
+  touch-action: pan-y pinch-zoom !important; /* Allow vertical scroll but capture horizontal for sliders */
+}

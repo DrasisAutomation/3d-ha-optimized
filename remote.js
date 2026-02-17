@@ -1009,12 +1009,22 @@ const closeRemoteModal = (remoteId) => {
   }
 };
 
-  // Setup event listeners for a remote instance - FIXED
-  const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl,
-    mainButton, closeModalBtn, cancelEditBtn, editForm,
-    switchNameInput, entityIdInput, controlTypeSelect,
-    switchGrid, iconGrid, remoteData) => {
-
+// Setup event listeners for a remote instance - FIXED for modal/touch coexistence
+const setupEventListeners = (id, modal, panelSwitch, panelEdit, panelControl, 
+                             mainButton, closeModalBtn, cancelEditBtn, editForm, 
+                             switchNameInput, entityIdInput, controlTypeSelect, 
+                             switchGrid, iconGrid, remoteData) => {
+    
+    // Function to enable body for 3D rotation
+    const enableBodyRotation = () => {
+      document.body.classList.remove('remote-modal-active');
+    };
+    
+    // Function to disable body for 3D rotation
+    const disableBodyRotation = () => {
+      document.body.classList.add('remote-modal-active');
+    };
+    
     // Open main modal
     mainButton.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1024,7 +1034,7 @@ const closeRemoteModal = (remoteId) => {
       mainButton.classList.add('active-main');
       mainButton.style.display = 'none';
       // Disable 3D rotation when modal is open
-      document.body.classList.add('modal-open');
+      disableBodyRotation();
     });
 
     mainButton.addEventListener('touchend', (e) => {
@@ -1035,16 +1045,16 @@ const closeRemoteModal = (remoteId) => {
       mainButton.classList.add('active-main');
       mainButton.style.display = 'none';
       // Disable 3D rotation when modal is open
-      document.body.classList.add('modal-open');
+      disableBodyRotation();
     });
 
     // Close button - FIXED for mobile
     const handleCloseButton = (e) => {
       e.preventDefault();
       e.stopPropagation();
-
+      
       console.log('Close button clicked'); // Debug log
-
+      
       // Check which panel is visible
       if (!panelSwitch.classList.contains('hidden')) {
         // On main grid → close modal
@@ -1053,7 +1063,7 @@ const closeRemoteModal = (remoteId) => {
         mainButton.classList.remove('active-main');
         mainButton.style.display = 'flex';
         // Re-enable 3D rotation when modal is closed
-        document.body.classList.remove('modal-open');
+        enableBodyRotation();
       } else {
         // In edit or control → go back to switch panel
         console.log('Going back to switch panel');
@@ -1063,7 +1073,7 @@ const closeRemoteModal = (remoteId) => {
 
     closeModalBtn.addEventListener('click', handleCloseButton);
     closeModalBtn.addEventListener('touchend', handleCloseButton);
-
+    
     // Prevent touchstart from triggering other events
     closeModalBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -1080,7 +1090,7 @@ const closeRemoteModal = (remoteId) => {
 
     cancelEditBtn.addEventListener('click', handleCancelEdit);
     cancelEditBtn.addEventListener('touchend', handleCancelEdit);
-
+    
     cancelEditBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1121,17 +1131,17 @@ const closeRemoteModal = (remoteId) => {
       input.addEventListener('click', (e) => {
         e.stopPropagation();
       });
-
+      
       input.addEventListener('touchend', (e) => {
         e.stopPropagation();
         e.preventDefault();
         input.focus();
       });
-
+      
       input.addEventListener('mousedown', (e) => {
         e.stopPropagation();
       });
-
+      
       input.addEventListener('touchstart', (e) => {
         e.stopPropagation();
       });
@@ -1142,14 +1152,14 @@ const closeRemoteModal = (remoteId) => {
       if (e.target === modal) {
         e.preventDefault();
         e.stopPropagation();
-
+        
         if (!panelSwitch.classList.contains('hidden')) {
           // On main grid → close modal
           modal.classList.remove('show');
           mainButton.classList.remove('active-main');
           mainButton.style.display = 'flex';
           // Re-enable 3D rotation when modal is closed
-          document.body.classList.remove('modal-open');
+          enableBodyRotation();
         } else {
           // In edit or control → go back to switch panel
           showSwitchPanel(id);
@@ -1168,14 +1178,41 @@ const closeRemoteModal = (remoteId) => {
           mainButton.classList.remove('active-main');
           mainButton.style.display = 'flex';
           // Re-enable 3D rotation when modal is closed
-          document.body.classList.remove('modal-open');
+          enableBodyRotation();
         } else {
           showSwitchPanel(id);
         }
       }
     });
+    
+    // Allow canvas interaction but ensure modal captures its own touches
+    modal.addEventListener('touchstart', (e) => {
+      // Don't prevent default for slider elements
+      if (e.target.classList.contains('remote-dynamic-slider') || 
+          e.target.closest('.remote-dynamic-slider')) {
+        // Allow slider to work
+        return;
+      }
+      // For other modal elements, stop propagation but don't prevent default
+      e.stopPropagation();
+    }, { passive: true });
+    
+    // Specifically handle slider touches to ensure they work
+    const sliders = modal.querySelectorAll('.remote-dynamic-slider');
+    sliders.forEach(slider => {
+      slider.addEventListener('touchstart', (e) => {
+        e.stopPropagation(); // Stop propagation but don't prevent default
+      }, { passive: true });
+      
+      slider.addEventListener('touchmove', (e) => {
+        e.stopPropagation(); // Stop propagation but don't prevent default
+      }, { passive: true });
+      
+      slider.addEventListener('touchend', (e) => {
+        e.stopPropagation(); // Stop propagation but don't prevent default
+      }, { passive: true });
+    });
   };
-
   // Public API
   return {
     // Create a new remote at a specific position

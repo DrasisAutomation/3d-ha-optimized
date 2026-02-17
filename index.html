@@ -1033,6 +1033,12 @@ function updateDeleteModeIndicator() {
 }
 
 function handlePointerStart(e) {
+  // Check if touch is inside a remote modal - if so, let modal handle it
+  if (e.target.closest('.remote-modal') || e.target.closest('.remote-main-button')) {
+    // Let the modal handle the touch
+    return;
+  }
+  
   e.preventDefault();
   e.stopPropagation();
   
@@ -1162,6 +1168,60 @@ function handlePointerStart(e) {
     }
   }
 }
+
+function handlePointerMove(e) {
+  // Check if touch is inside a remote modal - if so, let modal handle it
+  if (e.target.closest('.remote-modal') || e.target.closest('.remote-main-button')) {
+    return;
+  }
+  
+  if (!isDown) return;
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const coords = getClientCoordinates(e);
+  const dx = coords.clientX - startX;
+  const dy = coords.clientY - startY;
+
+  if (mode === "view" || sceneSelectionMode) {
+    lon -= dx * 0.1;
+    lat += dy * 0.1;
+  }
+
+  if (mode === "move" && selectedHotspot) {
+    setMouseFromEvent(e);
+    const hit = raycaster.intersectObject(activeSphere);
+    if (hit.length) {
+      selectedHotspot.position.copy(hit[0].point);
+    }
+  }
+
+  startX = coords.clientX;
+  startY = coords.clientY;
+}
+
+function handlePointerEnd(e) {
+  // Check if touch is inside a remote modal - if so, let modal handle it
+  if (e.target.closest('.remote-modal') || e.target.closest('.remote-main-button')) {
+    return;
+  }
+  
+  if (!isDown) return;
+  e.preventDefault();
+  e.stopPropagation();
+  
+  if (mode === "move" && selectedHotspot) {
+    if (!selectedHotspot.position.equals(hotspotMoveStartPosition)) {
+      updateHotspotPosition(selectedHotspot, selectedHotspot.position);
+    }
+  }
+  
+  isDown = false;
+  selectedHotspot = null;
+  hotspotMoveStartPosition = null;
+  isTouch = false;
+}
+
 function handlePointerMove(e) {
   if (!isDown) return;
   e.preventDefault();
