@@ -10,3 +10,4 @@ I + M + U	Create new scene (upload 360 image)
 I + M + R	Manage scenes (rename / delete)
 S + D	    Save design (download JSON)
 L + D	    Load design
+D + T       Delete hotspot or Remote button

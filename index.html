@@ -24,6 +24,11 @@
   Remote Placement Mode Active - Click to place remote
 </div>
 
+<!-- Media Remote Mode Indicator -->
+<div class="remote-mode-indicator" id="mediaRemoteModeIndicator" style="background: rgba(33, 150, 243, 0.9);">
+  Media Remote Placement Mode Active - Click to place media remote
+</div>
+
 <!-- Scene selection indicator -->
 <div class="scene-selection-indicator" id="sceneSelectionIndicator">
   Scene Selection Mode Active - Click on a hotspot
@@ -105,8 +110,10 @@
     </div>
   </div>
 </div>
+
 <script src="three.min.js"></script>
 <script src="remote.js"></script>
+<script src="media-remote.js"></script>
 <script>
 /* ================== SCENE DATA ================== */
 
@@ -124,8 +131,9 @@ let sceneSelectionMode = false;
 let selectedHotspotForScene = null;
 let deleteMode = false;
 
-/* ================== REMOTE MODE ================== */
-let remoteMode = false;
+/* ================== REMOTE MODES ================== */
+let remoteMode = false; // Standard remote placement mode
+let mediaRemoteMode = false; // Media remote placement mode
 let remoteTargetScene = null;
 
 /* ================== THREE ================== */
@@ -144,7 +152,7 @@ const renderer = new THREE.WebGLRenderer({
   powerPreference: "high-performance"
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // OPTIMIZED: Cap pixel ratio
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.LinearToneMapping;
 renderer.toneMappingExposure = 2;
@@ -157,7 +165,6 @@ geometry.scale(-1, 1, 1);
 
 const loader = new THREE.TextureLoader();
 
-// OPTIMIZATION: Texture cache
 const textureCache = new Map();
 
 function createSphere(opacity) {
@@ -184,7 +191,6 @@ let inactiveSphere = sphereB;
 let hotspotMeshes = [];
 let hotspotIcon;
 
-// Load hotspot icon
 loader.load("icon.png", (texture) => {
   texture.colorSpace = THREE.SRGBColorSpace;
   hotspotIcon = texture;
@@ -215,7 +221,6 @@ function createPlaceholderIcon() {
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-// OPTIMIZATION: Preload all scenes
 function preloadAllScenes() {
   Object.keys(SCENES).forEach(sceneKey => {
     if (!textureCache.has(sceneKey) && SCENES[sceneKey].image) {
@@ -230,7 +235,7 @@ function preloadAllScenes() {
   });
 }
 
-/* ================== LOAD SCENE (OPTIMIZED CROSS FADE) ================== */
+/* ================== LOAD SCENE ================== */
 
 let isTransitioning = false;
 let pendingSceneLoad = null;
@@ -241,7 +246,6 @@ function loadScene(sceneKey) {
     return;
   }
   
-  // Prevent multiple simultaneous transitions
   if (isTransitioning) {
     pendingSceneLoad = sceneKey;
     console.log('Transition in progress, queueing:', sceneKey);
@@ -251,7 +255,6 @@ function loadScene(sceneKey) {
   isTransitioning = true;
   pendingSceneLoad = null;
   
-  // OPTIMIZATION: Use cached texture
   const applyTexture = (tex) => {
     inactiveSphere.material.map = tex;
     inactiveSphere.material.opacity = 0;
@@ -259,7 +262,7 @@ function loadScene(sceneKey) {
 
     let t = 0;
     function fade() {
-      t += 0.04; // OPTIMIZATION: Faster fade
+      t += 0.04;
       
       inactiveSphere.material.opacity = t;
       activeSphere.material.opacity = 1 - t;
@@ -275,6 +278,7 @@ function loadScene(sceneKey) {
 
         currentScene = sceneKey;
         RemoteModule.setCurrentScene(sceneKey);
+        MediaRemoteModule.setCurrentScene(sceneKey);
         clearHotspots();
         createHotspots(sceneKey);
         updateRemoteVisibility();
@@ -282,7 +286,6 @@ function loadScene(sceneKey) {
         
         isTransitioning = false;
         
-        // Process queued navigation
         if (pendingSceneLoad) {
           console.log('Processing queued scene:', pendingSceneLoad);
           loadScene(pendingSceneLoad);
@@ -292,7 +295,6 @@ function loadScene(sceneKey) {
     fade();
   };
 
-  // Use cached texture if available
   if (textureCache.has(sceneKey)) {
     const tex = textureCache.get(sceneKey);
     console.log(`Using cached texture for: ${sceneKey}`);
@@ -407,20 +409,54 @@ function updateRemoteModeIndicator() {
   }
 }
 
+function updateMediaRemoteModeIndicator() {
+  const indicator = document.getElementById('mediaRemoteModeIndicator');
+  if (mediaRemoteMode) {
+    indicator.classList.add('show');
+  } else {
+    indicator.classList.remove('show');
+  }
+}
+
+function updateDeleteModeIndicator() {
+  const indicator = document.getElementById('deleteModeIndicator');
+  if (deleteMode) {
+    indicator.classList.add('show');
+  } else {
+    indicator.classList.remove('show');
+  }
+}
+
+function updateSceneSelectionIndicator() {
+  const indicator = document.getElementById('sceneSelectionIndicator');
+  if (sceneSelectionMode) {
+    indicator.classList.add('show');
+  } else {
+    indicator.classList.remove('show');
+  }
+}
+
 function handleRemotePlacement(point) {
-  if (!remoteMode) return;
+  if (!remoteMode && !mediaRemoteMode) return;
   
-  RemoteModule.createRemote(point, remoteTargetScene || currentScene);
-  console.log(`Remote placed at position: ${JSON.stringify(point.toArray())}`);
-  
-  remoteMode = false;
-  updateRemoteModeIndicator();
+  if (remoteMode) {
+    RemoteModule.createRemote(point, remoteTargetScene || currentScene);
+    console.log(`Standard remote placed at position: ${JSON.stringify(point.toArray())}`);
+    remoteMode = false;
+    updateRemoteModeIndicator();
+  } else if (mediaRemoteMode) {
+    MediaRemoteModule.createRemote(point, remoteTargetScene || currentScene);
+    console.log(`Media remote placed at position: ${JSON.stringify(point.toArray())}`);
+    mediaRemoteMode = false;
+    updateMediaRemoteModeIndicator();
+  }
 }
 
 function saveDesignWithRemotes() {
   const designData = {
     scenes: SCENES,
     remotes: RemoteModule.getRemotesData(),
+    mediaRemotes: MediaRemoteModule.getRemotesData(),
     currentScene: currentScene,
     haConfig: RemoteModule.getHAConfig()
   };
@@ -468,7 +504,6 @@ function loadDesignWithRemotes() {
         currentScene = loadedData.currentScene || Object.keys(SCENES)[0];
         updateScenesList();
         
-        // OPTIMIZATION: Clear and repopulate texture cache
         textureCache.clear();
         preloadAllScenes();
         loadScene(currentScene);
@@ -477,6 +512,11 @@ function loadDesignWithRemotes() {
       if (loadedData.remotes && Array.isArray(loadedData.remotes)) {
         RemoteModule.loadRemotes(loadedData.remotes);
         RemoteModule.updateRemoteVisibility(currentScene);
+      }
+      
+      if (loadedData.mediaRemotes && Array.isArray(loadedData.mediaRemotes)) {
+        MediaRemoteModule.loadRemotes(loadedData.mediaRemotes);
+        MediaRemoteModule.updateRemoteVisibility(currentScene);
       }
       
       closeLoadDesignModal();
@@ -491,6 +531,7 @@ function loadDesignWithRemotes() {
 
 function updateRemoteVisibility() {
   RemoteModule.updateRemoteVisibility(currentScene);
+  MediaRemoteModule.updateRemoteVisibility(currentScene);
 }
 
 /* ================== SCENE SELECTION POPUP FUNCTIONS ================== */
@@ -559,15 +600,6 @@ function updateHotspotTarget(targetScene) {
         }, 1000);
       }
     }
-  }
-}
-
-function updateSceneSelectionIndicator() {
-  const indicator = document.getElementById('sceneSelectionIndicator');
-  if (sceneSelectionMode) {
-    indicator.classList.add('show');
-  } else {
-    indicator.classList.remove('show');
   }
 }
 
@@ -699,14 +731,12 @@ function handleManageAction(e) {
       e.target.dataset.action = 'rename';
       updateScenesList();
       
-      // OPTIMIZATION: Clear and reload texture cache for this scene if needed
       if (textureCache.has(sceneKey)) {
         // Keep texture, just update name
       }
     }
   } else if (action === 'delete') {
     if (confirm(`Are you sure you want to delete "${SCENES[sceneKey].name}"?`)) {
-      // OPTIMIZATION: Remove from cache
       textureCache.delete(sceneKey);
       delete SCENES[sceneKey];
       
@@ -743,7 +773,6 @@ function createNewScene() {
     updateScenesList();
     closeCreateSceneModal();
     
-    // OPTIMIZATION: Preload new scene
     loader.load(e.target.result, tex => {
       tex.colorSpace = THREE.SRGBColorSpace;
       textureCache.set(sceneKey, tex);
@@ -858,22 +887,41 @@ document.addEventListener('touchstart', (e) => {
 
 /* ================== KEY CONTROLS ================== */
 
-/* ================== KEY CONTROLS ================== */
-
 const keys = new Set();
 
 document.addEventListener("keydown", e => {
-  keys.add(e.key.toLowerCase());
+  const key = e.key.toLowerCase();
+  keys.add(key);
 
-  // Remote placement mode (S + R)
+  // Standard Remote placement mode (S + R)
   if (keys.has("s") && keys.has("r")) {
-    if (!remoteMode) {
+    if (!remoteMode && !mediaRemoteMode) {
       remoteMode = true;
-      deleteMode = false; // Disable delete mode
+      deleteMode = false;
+      mediaRemoteMode = false;
       remoteTargetScene = currentScene;
       updateRemoteModeIndicator();
+      updateMediaRemoteModeIndicator();
       updateDeleteModeIndicator();
-      console.log("Remote placement mode ACTIVATED for scene: " + SCENES[currentScene].name);
+      console.log("Standard remote placement mode ACTIVATED for scene: " + SCENES[currentScene].name);
+    }
+    mode = "view";
+    sceneSelectionMode = false;
+    updateSceneSelectionIndicator();
+  }
+  
+  // Media Remote placement mode (M + R + B)
+  if (keys.has("m") && keys.has("r") && keys.has("b")) {
+    e.preventDefault();
+    if (!mediaRemoteMode && !remoteMode) {
+      mediaRemoteMode = true;
+      deleteMode = false;
+      remoteMode = false;
+      remoteTargetScene = currentScene;
+      updateMediaRemoteModeIndicator();
+      updateRemoteModeIndicator();
+      updateDeleteModeIndicator();
+      console.log("Media remote placement mode ACTIVATED for scene: " + SCENES[currentScene].name);
     }
     mode = "view";
     sceneSelectionMode = false;
@@ -885,7 +933,12 @@ document.addEventListener("keydown", e => {
     if (remoteMode) {
       remoteMode = false;
       updateRemoteModeIndicator();
-      console.log("Remote placement mode DEACTIVATED.");
+      console.log("Standard remote placement mode DEACTIVATED.");
+    }
+    if (mediaRemoteMode) {
+      mediaRemoteMode = false;
+      updateMediaRemoteModeIndicator();
+      console.log("Media remote placement mode DEACTIVATED.");
     }
     if (sceneSelectionMode) {
       sceneSelectionMode = false;
@@ -902,7 +955,7 @@ document.addEventListener("keydown", e => {
   
   // Scene selection mode (N + E)
   if (keys.has("n") && keys.has("e")) {
-    if (!sceneSelectionMode && !remoteMode && !deleteMode) {
+    if (!sceneSelectionMode && !remoteMode && !mediaRemoteMode && !deleteMode) {
       sceneSelectionMode = true;
       mode = "view";
       updateSceneSelectionIndicator();
@@ -910,28 +963,31 @@ document.addEventListener("keydown", e => {
     }
   }
   
-  // Delete mode (D + L + T)
-// Delete mode (D + T)
-if (keys.has("d") && keys.has("t")) {
-  e.preventDefault();
-  deleteMode = true;
-  remoteMode = false;
-  sceneSelectionMode = false;
-  mode = "view";
-  updateDeleteModeIndicator();
-  updateRemoteModeIndicator();
-  updateSceneSelectionIndicator();
-  console.log("Delete mode ACTIVATED. Click on a remote or hotspot to delete it.");
-}
+  // Delete mode (D + T)
+  if (keys.has("d") && keys.has("t")) {
+    e.preventDefault();
+    deleteMode = true;
+    remoteMode = false;
+    mediaRemoteMode = false;
+    sceneSelectionMode = false;
+    mode = "view";
+    updateDeleteModeIndicator();
+    updateRemoteModeIndicator();
+    updateMediaRemoteModeIndicator();
+    updateSceneSelectionIndicator();
+    console.log("Delete mode ACTIVATED. Click on a remote or hotspot to delete it.");
+  }
   
   // Add mode (N + B)
   if (keys.has("n") && keys.has("b")) {
     sceneSelectionMode = false;
     deleteMode = false;
     remoteMode = false;
+    mediaRemoteMode = false;
     updateSceneSelectionIndicator();
     updateDeleteModeIndicator();
     updateRemoteModeIndicator();
+    updateMediaRemoteModeIndicator();
     mode = "add";
   }
   
@@ -940,9 +996,11 @@ if (keys.has("d") && keys.has("t")) {
     sceneSelectionMode = false;
     deleteMode = false;
     remoteMode = false;
+    mediaRemoteMode = false;
     updateSceneSelectionIndicator();
     updateDeleteModeIndicator();
     updateRemoteModeIndicator();
+    updateMediaRemoteModeIndicator();
     mode = "move";
   }
   
@@ -995,7 +1053,7 @@ let isTouch = false;
 let startX = 0, startY = 0;
 let selectedHotspot = null;
 let hotspotMoveStartPosition = null;
-let clickTimeout = null; // OPTIMIZATION: Debounce clicks
+let clickTimeout = null;
 
 function getClientCoordinates(event) {
   if (event.touches && event.touches.length > 0) {
@@ -1023,19 +1081,60 @@ function setMouseFromEvent(e) {
   raycaster.setFromCamera(mouse, camera);
 }
 
-function updateDeleteModeIndicator() {
-  const indicator = document.getElementById('deleteModeIndicator');
-  if (deleteMode) {
-    indicator.classList.add('show');
-  } else {
-    indicator.classList.remove('show');
-  }
-}
-
 function handlePointerStart(e) {
-  // Check if touch is inside a remote modal - if so, let modal handle it
-  if (e.target.closest('.remote-modal') || e.target.closest('.remote-main-button')) {
-    // Let the modal handle the touch
+  // Check if touch is inside any remote modal - if so, let modal handle it
+  if (e.target.closest('.remote-modal') || e.target.closest('.remote-main-button') ||
+      e.target.closest('.media-remote-modal') || e.target.closest('.media-remote-main-button')) {
+    
+    // IMPORTANT: If in delete mode, prevent modal from opening
+    if (deleteMode) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Check for standard remote containers
+      const coords = getClientCoordinates(e);
+      const standardRemoteContainers = Array.from(document.querySelectorAll('.remote-container')).filter(container => {
+        const mainButton = container.querySelector('.remote-main-button');
+        if (mainButton) {
+          const buttonRect = mainButton.getBoundingClientRect();
+          return coords.clientX >= buttonRect.left && coords.clientX <= buttonRect.right &&
+                 coords.clientY >= buttonRect.top && coords.clientY <= buttonRect.bottom;
+        }
+        return false;
+      });
+      
+      if (standardRemoteContainers.length > 0) {
+        const remoteId = standardRemoteContainers[0].id;
+        if (confirm('Are you sure you want to delete this standard remote?')) {
+          RemoteModule.deleteRemote(remoteId);
+          console.log('Standard remote deleted:', remoteId);
+        }
+        isDown = false;
+        return;
+      }
+      
+      // Check for media remote containers
+      const mediaRemoteContainers = Array.from(document.querySelectorAll('.media-remote-container')).filter(container => {
+        const mainButton = container.querySelector('.media-remote-main-button');
+        if (mainButton) {
+          const buttonRect = mainButton.getBoundingClientRect();
+          return coords.clientX >= buttonRect.left && coords.clientX <= buttonRect.right &&
+                 coords.clientY >= buttonRect.top && coords.clientY <= buttonRect.bottom;
+        }
+        return false;
+      });
+      
+      if (mediaRemoteContainers.length > 0) {
+        const remoteId = mediaRemoteContainers[0].id;
+        if (confirm('Are you sure you want to delete this media remote?')) {
+          MediaRemoteModule.deleteRemote(remoteId);
+          console.log('Media remote deleted:', remoteId);
+        }
+        isDown = false;
+        return;
+      }
+    }
+    
     return;
   }
   
@@ -1053,27 +1152,43 @@ function handlePointerStart(e) {
 
   // DELETE MODE - Check for remotes and hotspots
   if (deleteMode) {
-    // Check for remote containers first
-    const remoteContainers = Array.from(document.querySelectorAll('.remote-container')).filter(container => {
-      const rect = container.getBoundingClientRect();
-      const touchX = coords.clientX;
-      const touchY = coords.clientY;
-      
-      // Check if click is within the main button area
+    // Check for standard remote containers
+    const standardRemoteContainers = Array.from(document.querySelectorAll('.remote-container')).filter(container => {
       const mainButton = container.querySelector('.remote-main-button');
       if (mainButton) {
         const buttonRect = mainButton.getBoundingClientRect();
-        return touchX >= buttonRect.left && touchX <= buttonRect.right &&
-               touchY >= buttonRect.top && touchY <= buttonRect.bottom;
+        return coords.clientX >= buttonRect.left && coords.clientX <= buttonRect.right &&
+               coords.clientY >= buttonRect.top && coords.clientY <= buttonRect.bottom;
       }
       return false;
     });
     
-    if (remoteContainers.length > 0) {
-      const remoteId = remoteContainers[0].id;
-      if (confirm('Are you sure you want to delete this remote?')) {
+    if (standardRemoteContainers.length > 0) {
+      const remoteId = standardRemoteContainers[0].id;
+      if (confirm('Are you sure you want to delete this standard remote?')) {
         RemoteModule.deleteRemote(remoteId);
-        console.log('Remote deleted:', remoteId);
+        console.log('Standard remote deleted:', remoteId);
+      }
+      isDown = false;
+      return;
+    }
+    
+    // Check for media remote containers
+    const mediaRemoteContainers = Array.from(document.querySelectorAll('.media-remote-container')).filter(container => {
+      const mainButton = container.querySelector('.media-remote-main-button');
+      if (mainButton) {
+        const buttonRect = mainButton.getBoundingClientRect();
+        return coords.clientX >= buttonRect.left && coords.clientX <= buttonRect.right &&
+               coords.clientY >= buttonRect.top && coords.clientY <= buttonRect.bottom;
+      }
+      return false;
+    });
+    
+    if (mediaRemoteContainers.length > 0) {
+      const remoteId = mediaRemoteContainers[0].id;
+      if (confirm('Are you sure you want to delete this media remote?')) {
+        MediaRemoteModule.deleteRemote(remoteId);
+        console.log('Media remote deleted:', remoteId);
       }
       isDown = false;
       return;
@@ -1086,11 +1201,8 @@ function handlePointerStart(e) {
       const hotspotIndex = hotspot.userData.index;
       
       if (confirm('Are you sure you want to delete this hotspot?')) {
-        // Remove from SCENES data
         if (SCENES[currentScene] && SCENES[currentScene].hotspots[hotspotIndex]) {
           SCENES[currentScene].hotspots.splice(hotspotIndex, 1);
-          
-          // Recreate hotspots without the deleted one
           clearHotspots();
           createHotspots(currentScene);
           console.log('Hotspot deleted');
@@ -1101,7 +1213,7 @@ function handlePointerStart(e) {
     }
   }
 
-  if (remoteMode) {
+  if (remoteMode || mediaRemoteMode) {
     const hit = raycaster.intersectObject(activeSphere);
     if (hit.length) {
       handleRemotePlacement(hit[0].point);
@@ -1122,19 +1234,15 @@ function handlePointerStart(e) {
   if (mode === "view" && !sceneSelectionMode && !deleteMode) {
     const hit = raycaster.intersectObjects(hotspotMeshes);
     if (hit.length) {
-      // Clear any pending navigation
       if (clickTimeout) {
         clearTimeout(clickTimeout);
         clickTimeout = null;
       }
       
-      // Immediate visual feedback
       hit[0].object.material.opacity = 0.5;
       
-      // Small delay to show feedback, but faster than before
       clickTimeout = setTimeout(() => {
         loadScene(hit[0].object.userData.target);
-        // Reset opacity after navigation starts
         setTimeout(() => {
           hit[0].object.material.opacity = 0.9;
         }, 200);
@@ -1170,8 +1278,8 @@ function handlePointerStart(e) {
 }
 
 function handlePointerMove(e) {
-  // Check if touch is inside a remote modal - if so, let modal handle it
-  if (e.target.closest('.remote-modal') || e.target.closest('.remote-main-button')) {
+  if (e.target.closest('.remote-modal') || e.target.closest('.remote-main-button') ||
+      e.target.closest('.media-remote-modal') || e.target.closest('.media-remote-main-button')) {
     return;
   }
   
@@ -1201,54 +1309,11 @@ function handlePointerMove(e) {
 }
 
 function handlePointerEnd(e) {
-  // Check if touch is inside a remote modal - if so, let modal handle it
-  if (e.target.closest('.remote-modal') || e.target.closest('.remote-main-button')) {
+  if (e.target.closest('.remote-modal') || e.target.closest('.remote-main-button') ||
+      e.target.closest('.media-remote-modal') || e.target.closest('.media-remote-main-button')) {
     return;
   }
   
-  if (!isDown) return;
-  e.preventDefault();
-  e.stopPropagation();
-  
-  if (mode === "move" && selectedHotspot) {
-    if (!selectedHotspot.position.equals(hotspotMoveStartPosition)) {
-      updateHotspotPosition(selectedHotspot, selectedHotspot.position);
-    }
-  }
-  
-  isDown = false;
-  selectedHotspot = null;
-  hotspotMoveStartPosition = null;
-  isTouch = false;
-}
-
-function handlePointerMove(e) {
-  if (!isDown) return;
-  e.preventDefault();
-  e.stopPropagation();
-  
-  const coords = getClientCoordinates(e);
-  const dx = coords.clientX - startX;
-  const dy = coords.clientY - startY;
-
-  if (mode === "view" || sceneSelectionMode) {
-    lon -= dx * 0.1;
-    lat += dy * 0.1;
-  }
-
-  if (mode === "move" && selectedHotspot) {
-    setMouseFromEvent(e);
-    const hit = raycaster.intersectObject(activeSphere);
-    if (hit.length) {
-      selectedHotspot.position.copy(hit[0].point);
-    }
-  }
-
-  startX = coords.clientX;
-  startY = coords.clientY;
-}
-
-function handlePointerEnd(e) {
   if (!isDown) return;
   e.preventDefault();
   e.stopPropagation();
@@ -1295,11 +1360,10 @@ function animate() {
   hotspotMeshes.forEach(h => h.lookAt(camera.position));
   
   RemoteModule.updateRemotePositions(camera);
+  MediaRemoteModule.updateRemotePositions(camera);
   
   renderer.render(scene, camera);
 }
-
-/* ================== INIT ================== */
 
 /* ================== INIT ================== */
 
@@ -1336,7 +1400,11 @@ function autoLoadData() {
             RemoteModule.updateRemoteVisibility(currentScene);
           }
           
-          // OPTIMIZATION: Preload all scenes after loading
+          if (loadedData.mediaRemotes && Array.isArray(loadedData.mediaRemotes)) {
+            MediaRemoteModule.loadRemotes(loadedData.mediaRemotes);
+            MediaRemoteModule.updateRemoteVisibility(currentScene);
+          }
+          
           preloadAllScenes();
           loadInitialScene();
         }
@@ -1352,11 +1420,9 @@ function autoLoadData() {
 }
 
 function loadDefault360View() {
-  // Create a default scene with a 360 image
   const defaultSceneKey = 'default';
-  const defaultImage = '360.jpg'; // Try to load existing 360.jpg
+  const defaultImage = '360.jpg';
   
-  // Check if 360.jpg exists, if not use a generated fallback
   SCENES = {
     default: {
       image: defaultImage,
@@ -1368,10 +1434,8 @@ function loadDefault360View() {
   currentScene = 'default';
   updateScenesList();
   
-  // Try to load the default image, if it fails create a colored fallback
   loader.load(defaultImage, 
     (tex) => {
-      // Success - image loaded
       tex.colorSpace = THREE.SRGBColorSpace;
       textureCache.set('default', tex);
       activeSphere.material.map = tex;
@@ -1381,28 +1445,25 @@ function loadDefault360View() {
     },
     undefined,
     (err) => {
-      // Failed to load image - create a gradient fallback
       console.warn('Could not load 360.jpg, creating default gradient view');
       createDefaultGradientSphere();
     }
   );
   
   RemoteModule.setCurrentScene('default');
+  MediaRemoteModule.setCurrentScene('default');
   updateScenesList();
   animate();
   
-  // Show a helpful message to the user
   showDefaultViewMessage();
 }
 
 function createDefaultGradientSphere() {
-  // Create a canvas with a gradient pattern as fallback
   const canvas = document.createElement('canvas');
   canvas.width = 2048;
   canvas.height = 1024;
   const ctx = canvas.getContext('2d');
   
-  // Create a gradient background
   const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
   gradient.addColorStop(0, '#2c3e50');
   gradient.addColorStop(0.25, '#3498db');
@@ -1413,11 +1474,9 @@ function createDefaultGradientSphere() {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-  // Add grid pattern for orientation
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
   ctx.lineWidth = 2;
   
-  // Draw grid lines
   for (let i = 0; i <= 8; i++) {
     const x = (canvas.width / 8) * i;
     ctx.beginPath();
@@ -1434,7 +1493,6 @@ function createDefaultGradientSphere() {
     ctx.stroke();
   }
   
-  // Add text
   ctx.fillStyle = 'white';
   ctx.font = 'bold 60px Arial';
   ctx.textAlign = 'center';
@@ -1445,7 +1503,6 @@ function createDefaultGradientSphere() {
   ctx.fillText('No scene data found', canvas.width/2, canvas.height/2 + 40);
   ctx.fillText('Use menu to create scenes', canvas.width/2, canvas.height/2 + 100);
   
-  // Create texture from canvas
   const fallbackTexture = new THREE.CanvasTexture(canvas);
   fallbackTexture.colorSpace = THREE.SRGBColorSpace;
   
@@ -1456,7 +1513,6 @@ function createDefaultGradientSphere() {
 }
 
 function showDefaultViewMessage() {
-  // Create a temporary message
   const messageDiv = document.createElement('div');
   messageDiv.style.position = 'fixed';
   messageDiv.style.bottom = '30px';
@@ -1478,7 +1534,6 @@ function showDefaultViewMessage() {
   
   document.body.appendChild(messageDiv);
   
-  // Auto-hide after 8 seconds
   setTimeout(() => {
     messageDiv.style.transition = 'opacity 0.5s';
     messageDiv.style.opacity = '0';
@@ -1506,21 +1561,21 @@ function loadInitialScene() {
         createHotspots(currentScene);
       }, undefined, (err) => {
         console.error('Failed to load initial scene:', err);
-        // If initial scene fails, try to load default
         if (currentScene !== 'default') {
           loadDefault360View();
         }
       });
     }
   } else {
-    // No valid scene, load default
     loadDefault360View();
   }
   
   RemoteModule.setCurrentScene(currentScene);
+  MediaRemoteModule.setCurrentScene(currentScene);
   updateScenesList();
   animate();
 }
+
 (async function initHomeAssistant() {
   console.log('Auto-connecting to Home Assistant...');
   updateHAStatus();
@@ -1537,7 +1592,6 @@ function loadInitialScene() {
   }
 })();
 
-// Start the auto-load process
 autoLoadData();
 
 /* ================== RESIZE ================== */
@@ -1552,8 +1606,14 @@ window.addEventListener("resize", () => {
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.remote-modal-content') && 
       !e.target.closest('.remote-main-button') &&
-      !e.target.closest('.remote-close-btn')) {
+      !e.target.closest('.remote-close-btn') &&
+      !e.target.closest('.media-remote-modal-content') && 
+      !e.target.closest('.media-remote-main-button') &&
+      !e.target.closest('.media-remote-close-btn')) {
     document.querySelectorAll('.remote-main-button').forEach(btn => {
+      btn.classList.remove('active-main');
+    });
+    document.querySelectorAll('.media-remote-main-button').forEach(btn => {
       btn.classList.remove('active-main');
     });
   }
@@ -1562,8 +1622,14 @@ document.addEventListener('click', (e) => {
 document.addEventListener('touchend', (e) => {
   if (!e.target.closest('.remote-modal-content') && 
       !e.target.closest('.remote-main-button') &&
-      !e.target.closest('.remote-close-btn')) {
+      !e.target.closest('.remote-close-btn') &&
+      !e.target.closest('.media-remote-modal-content') && 
+      !e.target.closest('.media-remote-main-button') &&
+      !e.target.closest('.media-remote-close-btn')) {
     document.querySelectorAll('.remote-main-button').forEach(btn => {
+      btn.classList.remove('active-main');
+    });
+    document.querySelectorAll('.media-remote-main-button').forEach(btn => {
       btn.classList.remove('active-main');
     });
   }
@@ -1577,10 +1643,6 @@ document.addEventListener('dblclick', function(e) {
   e.preventDefault();
 }, { passive: false });
 
-if (window.DeviceOrientationEvent) {
-  window.addEventListener('deviceorientation', function(e) {});
-}
-
 setInterval(() => {
   const haConfig = RemoteModule.getHAConfig();
   if (haConfig.connected) {
@@ -1589,42 +1651,6 @@ setInterval(() => {
 }, 30000);
 
 setInterval(updateHAStatus, 2000);
-// Add this to the RemoteModule public API (at the end of the return object)
-
-// Delete a remote by ID
-deleteRemote: (remoteId) => {
-  const container = document.getElementById(remoteId);
-  if (container) {
-    container.remove();
-  }
-  return remotesData.delete(remoteId);
-},
-
-document.addEventListener('DOMContentLoaded', function() {
-  function updateRemoteButtons() {
-    document.querySelectorAll('.remote-container').forEach(container => {
-      const mainButton = container.querySelector('.remote-main-button');
-      const modal = container.querySelector('.remote-modal.show');
-      const editModal = container.querySelector('.remote-edit-modal.show');
-      
-      if (mainButton) {
-        if (modal || editModal) {
-          mainButton.style.display = 'none';
-          container.classList.add('remote-modal-open');
-        } else {
-          mainButton.style.display = 'flex';
-          container.classList.remove('remote-modal-open');
-        }
-      }
-    });
-  }
-  
-  updateRemoteButtons();
-  document.addEventListener('click', updateRemoteButtons);
-  document.addEventListener('touchend', updateRemoteButtons);
-  setInterval(updateRemoteButtons, 100);
-});
 </script>
-
 </body>
 </html>
