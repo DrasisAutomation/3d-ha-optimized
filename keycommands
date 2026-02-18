@@ -4,6 +4,7 @@ N + B	    Add hotspot (room link)
 M + E	    Move hotspot
 N + E	    Change hotspot target room
 S + R	    Place remote switch
+M + R + B   Place Media Remote switch
 M + D	    Exit / Cancel any mode
 S + Y	    Sync Home Assistant devices
 I + M + U	Create new scene (upload 360 image)

@@ -270,7 +270,7 @@
           "name": "chandlie",
           "icon": "fas fa-sliders-h",
           "entityId": "switch.exp_room_r4",
-          "active": true,
+          "active": false,
           "controlType": "toggle"
         },
         {
@@ -291,7 +291,7 @@
           "name": "Spot",
           "icon": "fas fa-lightbulb",
           "entityId": "switch.exproom_lumi_2ch_r4",
-          "active": false,
+          "active": true,
           "controlType": "toggle"
         },
         {
@@ -313,7 +313,7 @@
   ],
   "mediaRemotes": [
     {
-      "id": "media-remote-2",
+      "id": "media-remote-1",
       "position": [
         498.601443680458,
         -30.18604856316707,
@@ -412,6 +412,22 @@
           "command": "BACK"
         }
       ]
+    }
+  ],
+  "lockRemotes": [
+    {
+      "id": "lock-remote-1",
+      "position": [
+        235.30175280741548,
+        79.12092097247964,
+        -433.73360560669835
+      ],
+      "targetScene": "scene1768371566300",
+      "config": {
+        "entityId": "lock.m302_b6e10c_2",
+        "friendlyName": "Front Door",
+        "icon": "fas fa-motorcycle"
+      }
     }
   ],
   "currentScene": "scene1768371566300",
