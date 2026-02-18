@@ -63,11 +63,12 @@ const LockModule = (() => {
     connected: false,
     socket: null,
     reconnectAttempts: 0,
-    maxReconnectAttempts: 5,
+    maxReconnectAttempts: 10, // Increased max attempts
     messageId: 1,
     pendingRequests: new Map(),
     autoReconnect: true,
-    reconnectInterval: 5000
+    reconnectInterval: 3000, // Reduced reconnect interval
+    connectionCheckInterval: null
   };
   // ==================================================
 
@@ -86,6 +87,11 @@ const LockModule = (() => {
       HA_CONFIG.socket.onopen = () => {
         console.log('WebSocket connected to Home Assistant');
         HA_CONFIG.reconnectAttempts = 0;
+
+        // Clear any existing connection check interval
+        if (HA_CONFIG.connectionCheckInterval) {
+          clearInterval(HA_CONFIG.connectionCheckInterval);
+        }
       };
 
       HA_CONFIG.socket.onmessage = (event) => {
@@ -142,22 +148,18 @@ const LockModule = (() => {
         HA_CONFIG.connected = true;
         ready = true;
         HA_CONFIG.reconnectAttempts = 0;
-        
-        // Get initial states
+
+        // Get initial states immediately
+        fetchAllLockStates();
+
+        // Subscribe to state changes
         setTimeout(() => {
           if (HA_CONFIG.socket && HA_CONFIG.socket.readyState === WebSocket.OPEN) {
             HA_CONFIG.socket.send(JSON.stringify({
               id: HA_CONFIG.messageId++,
-              type: "get_states"
+              type: "subscribe_events",
+              event_type: "state_changed"
             }));
-
-            setTimeout(() => {
-              HA_CONFIG.socket.send(JSON.stringify({
-                id: HA_CONFIG.messageId++,
-                type: "subscribe_events",
-                event_type: "state_changed"
-              }));
-            }, 100);
           }
         }, 100);
         break;
@@ -175,9 +177,9 @@ const LockModule = (() => {
           HA_CONFIG.pendingRequests.delete(message.id);
           if (message.success) {
             pendingRequest.resolve(message);
-            
+
             // Handle get_states result
-            if (message.id === 1 && message.result) {
+            if (message.id && message.result) {
               updateLockStatesFromResult(message.result);
             }
           } else {
@@ -194,32 +196,48 @@ const LockModule = (() => {
     }
   };
 
-  // Update lock states from get_states result
-  const updateLockStatesFromResult = (states) => {
-    remotesData.forEach((remoteData, remoteId) => {
-      const entityId = remoteData.config.entityId;
-      if (entityId) {
-        const lock = states.find(e => e.entity_id === entityId);
-        if (lock) {
-          const locked = lock.state === "locked";
-          remoteData.isLocked = locked;
-          remoteData.processing = false;
-          
-          // Update UI
-          updateLockUI(remoteId, locked, false);
-        }
-      }
-    });
+  // Fetch all lock states
+  const fetchAllLockStates = () => {
+    if (!HA_CONFIG.connected || !HA_CONFIG.socket) {
+      console.log('HA not connected, cannot fetch states');
+      return;
+    }
+
+    const messageId = HA_CONFIG.messageId++;
+    const message = {
+      id: messageId,
+      type: 'get_states'
+    };
+
+    HA_CONFIG.socket.send(JSON.stringify(message));
   };
+
+ const updateLockStatesFromResult = (states) => {
+  console.log('Updating lock states from result');
+  remotesData.forEach((remoteData, remoteId) => {
+    const entityId = remoteData.config.entityId;
+    if (entityId) {
+      const lock = states.find(e => e.entity_id === entityId);
+      if (lock) {
+        const locked = lock.state === "locked";
+        remoteData.isLocked = locked;
+        remoteData.processing = false;
+        updateLockUI(remoteId, locked, false);
+        console.log(`Lock ${entityId} state: ${locked ? 'LOCKED' : 'UNLOCKED'}`);
+      }
+    }
+  });
+};
 
   // Handle state change events
   const handleStateChange = (data) => {
     const entityId = data.entity_id;
-    
+
     remotesData.forEach((remoteData, remoteId) => {
       if (remoteData.config.entityId === entityId) {
         const newState = data.new_state.state;
-        
+        console.log(`State change for ${entityId}: ${newState}`);
+
         if (newState === "locked" || newState === "unlocked") {
           const locked = newState === "locked";
           remoteData.isLocked = locked;
@@ -242,33 +260,38 @@ const LockModule = (() => {
     const lockSwitchElement = document.getElementById(`${remoteId}-lockSwitch`);
 
     if (lockToggle) lockToggle.checked = locked;
-    
+
     if (lockStatus) {
       if (isProcessing) {
         lockStatus.textContent = 'PROCESSING...';
         lockStatus.className = 'lock-status processing';
+        lockStatus.style.color = '#ff9900';
       } else {
         lockStatus.textContent = locked ? 'LOCKED' : 'UNLOCKED';
-        lockStatus.className = `lock-status ${locked ? 'locked' : 'unlocked'}`;
+        lockStatus.className = 'lock-status';
+        lockStatus.style.color = locked ? '#33cc33' : '#ff3333';
       }
     }
-    
+
     if (mainButton) {
-      // Remove all state classes first
+      // Remove all state classes
       mainButton.classList.remove('locked', 'unlocked', 'processing');
-      
+
       if (isProcessing) {
         mainButton.classList.add('processing');
         mainButton.style.boxShadow = '0 0 15px rgba(255, 165, 0, 0.6)';
+        mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
       } else if (locked) {
         mainButton.classList.add('locked');
         mainButton.style.boxShadow = '0 0 15px rgba(0, 255, 0, 0.3)';
+        mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
       } else {
         mainButton.classList.add('unlocked');
         mainButton.style.boxShadow = '0 0 15px rgba(255, 0, 0, 0.3)';
+        mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
       }
     }
-    
+
     if (lockSwitchElement) {
       if (isProcessing) {
         lockSwitchElement.classList.add('processing');
@@ -278,12 +301,16 @@ const LockModule = (() => {
     }
   };
 
-  // Fetch initial lock state for a specific remote
-  const fetchInitialLockState = async (remoteId, entityId) => {
+  const fetchInitialLockState = async (remoteId, entityId, retryCount = 0) => {
     if (!HA_CONFIG.connected || !HA_CONFIG.socket) {
-      console.log('HA not connected, cannot fetch initial state');
-      // Set default state based on entity ID or just show unlocked
-      updateLockUI(remoteId, false, false);
+      console.log('HA not connected, cannot fetch initial state for', entityId);
+
+      // Try again after delay if within retry limit
+      if (retryCount < 5) {
+        setTimeout(() => {
+          fetchInitialLockState(remoteId, entityId, retryCount + 1);
+        }, 1000);
+      }
       return;
     }
 
@@ -297,13 +324,14 @@ const LockModule = (() => {
       const response = await new Promise((resolve, reject) => {
         HA_CONFIG.pendingRequests.set(messageId, { resolve, reject });
         HA_CONFIG.socket.send(JSON.stringify(message));
-        
+
+        // Increased timeout
         setTimeout(() => {
           if (HA_CONFIG.pendingRequests.has(messageId)) {
             HA_CONFIG.pendingRequests.delete(messageId);
             reject(new Error('Timeout fetching states'));
           }
-        }, 5000);
+        }, 10000);
       });
 
       if (response.success && response.result) {
@@ -318,15 +346,24 @@ const LockModule = (() => {
             console.log(`Lock state for ${entityId}: ${isLocked ? 'LOCKED' : 'UNLOCKED'}`);
           }
         } else {
-          console.log(`Lock entity ${entityId} not found, using default state`);
-          updateLockUI(remoteId, false, false);
+          console.log(`Lock entity ${entityId} not found, retrying...`);
+          if (retryCount < 5) {
+            setTimeout(() => {
+              fetchInitialLockState(remoteId, entityId, retryCount + 1);
+            }, 1000);
+          }
         }
       }
     } catch (error) {
       console.error('Error fetching initial lock state:', error);
-      updateLockUI(remoteId, false, false);
+      if (retryCount < 5) {
+        setTimeout(() => {
+          fetchInitialLockState(remoteId, entityId, retryCount + 1);
+        }, 1000);
+      }
     }
   };
+
 
   // Call service via WebSocket
   const callService = (domain, service, data) => {
@@ -334,7 +371,7 @@ const LockModule = (() => {
       console.warn('Home Assistant not connected');
       return Promise.reject('Not connected');
     }
-    
+
     const messageId = HA_CONFIG.messageId++;
     const message = {
       id: messageId,
@@ -343,20 +380,20 @@ const LockModule = (() => {
       service: service,
       service_data: data
     };
-    
+
     console.log('Sending command:', message);
     HA_CONFIG.socket.send(JSON.stringify(message));
-    
+
     return new Promise((resolve, reject) => {
       HA_CONFIG.pendingRequests.set(messageId, { resolve, reject });
-      
-      // Timeout after 5 seconds
+
+      // Increased timeout to 10 seconds for lock operations
       setTimeout(() => {
         if (HA_CONFIG.pendingRequests.has(messageId)) {
           HA_CONFIG.pendingRequests.delete(messageId);
-          reject(new Error('Command timeout'));
+          reject(new Error('Command timeout - lock may still be processing'));
         }
-      }, 5000);
+      }, 10000);
     });
   };
 
@@ -374,7 +411,7 @@ const LockModule = (() => {
   const showMainPanel = (remoteId) => {
     const panelMain = document.getElementById(`${remoteId}-panelMain`);
     const panelEdit = document.getElementById(`${remoteId}-panelEdit`);
-    
+
     if (panelMain && panelEdit) {
       panelMain.classList.remove('hidden');
       panelEdit.classList.add('hidden');
@@ -414,7 +451,7 @@ const LockModule = (() => {
           </button>
           
           <button class="lock-remote-edit-btn" id="${remoteId}-editBtn">
-            <i class="fas fa-edit" style="display:none;"></i>
+            <i class="fas fa-edit"></i>
           </button>
 
           <div class="lock-remote-title" id="${remoteId}-modalTitle">${config.friendlyName}</div>
@@ -462,26 +499,26 @@ const LockModule = (() => {
 
     document.body.appendChild(container);
 
-    // Store remote data
     remotesData.set(remoteId, {
       id: remoteId,
       position: position,
       targetScene: targetScene || '',
       config: config,
-      isLocked: true,
+      isLocked: null, // Start with null (unknown state)
       processing: false,
       container: container,
       visible: true,
       isEditMode: false
     });
-
     // Initialize the modal
     initRemoteModal(remoteId);
 
     // Fetch initial lock state if HA is connected, otherwise set default
     setTimeout(() => {
       if (HA_CONFIG.connected && config.entityId) {
-        fetchInitialLockState(remoteId, config.entityId);
+        setTimeout(() => {
+          fetchInitialLockState(remoteId, config.entityId);
+        }, 100);
       } else {
         // Default to unlocked state with red glow
         updateLockUI(remoteId, false, false);
@@ -572,7 +609,7 @@ const LockModule = (() => {
     if (!HA_CONFIG.connected || !HA_CONFIG.socket) {
       console.warn('Home Assistant not connected');
       alert('Home Assistant not connected');
-      
+
       // Toggle locally for demo purposes
       remoteData.isLocked = shouldLock;
       updateLockUI(remoteId, shouldLock, false);
@@ -600,7 +637,7 @@ const LockModule = (() => {
       .catch(error => {
         console.error('Failed to send lock command:', error);
         alert('Failed to send command: ' + error.message);
-        
+
         // Reset processing state on error
         remoteData.processing = false;
         updateLockUI(remoteId, remoteData.isLocked, false);
@@ -645,7 +682,7 @@ const LockModule = (() => {
 
     // Update UI
     document.getElementById(`${remoteId}-modalTitle`).textContent = remoteData.config.friendlyName;
-    
+
     const mainButtonIcon = document.querySelector(`#${remoteId}-mainButton i`);
     if (mainButtonIcon) {
       mainButtonIcon.className = `${selectedIcon} icon`;
@@ -657,7 +694,7 @@ const LockModule = (() => {
     // Save to localStorage for persistence across sessions
     try {
       localStorage.setItem(`lockConfig_${remoteId}`, JSON.stringify(remoteData.config));
-    } catch (e) {}
+    } catch (e) { }
 
     console.log('Lock configuration saved:', remoteData.config);
 
@@ -682,9 +719,9 @@ const LockModule = (() => {
 
   // Setup all event listeners
   const setupEventListeners = (remoteId, modal, panelMain, panelEdit,
-                               mainButton, closeModalBtn, editBtn, cancelEditBtn, saveButton,
-                               lockSwitch, lockToggle, lockStatus, entityIdInput, friendlyNameInput,
-                               modalTitle, iconGrid, remoteData) => {
+    mainButton, closeModalBtn, editBtn, cancelEditBtn, saveButton,
+    lockSwitch, lockToggle, lockStatus, entityIdInput, friendlyNameInput,
+    modalTitle, iconGrid, remoteData) => {
 
     // Open modal
     const openModal = () => {
@@ -780,7 +817,7 @@ const LockModule = (() => {
       sendLockCommand(remoteId, newState);
     });
 
-    // Long press on main button for edit
+    // Long press on main button for edit - 800ms hold
     let longPressTimer = null;
 
     const startLongPress = (e) => {
@@ -796,7 +833,7 @@ const LockModule = (() => {
           panelEdit.classList.remove('hidden');
         }, 100);
         longPressTimer = null;
-      }, 15000);   //hold-time
+      }, 800); // 800ms hold to edit
     };
 
     const cancelLongPress = () => {
@@ -829,7 +866,7 @@ const LockModule = (() => {
 
     // Prevent propagation for form elements
     const formElements = [entityIdInput, friendlyNameInput];
-    
+
     formElements.forEach(input => {
       if (input) {
         input.addEventListener('click', (e) => e.stopPropagation());
@@ -844,17 +881,17 @@ const LockModule = (() => {
         input.addEventListener('click', (e) => {
           e.stopPropagation();
         });
-        
+
         input.addEventListener('touchend', (e) => {
           e.stopPropagation();
           e.preventDefault();
           input.focus();
         });
-        
+
         input.addEventListener('mousedown', (e) => {
           e.stopPropagation();
         });
-        
+
         input.addEventListener('touchstart', (e) => {
           e.stopPropagation();
         });
@@ -870,13 +907,13 @@ const LockModule = (() => {
         entityIdInput.value = remoteData.config.entityId;
         friendlyNameInput.value = remoteData.config.friendlyName;
         modalTitle.textContent = remoteData.config.friendlyName;
-        
+
         const mainButtonIcon = document.querySelector(`#${remoteId}-mainButton i`);
         if (mainButtonIcon) {
           mainButtonIcon.className = `${remoteData.config.icon} icon`;
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   // Initialize WebSocket on module load
@@ -892,6 +929,13 @@ const LockModule = (() => {
         position: position,
         targetScene: targetScene || ''
       };
+    },
+
+    // Force refresh all lock states
+    refreshAllLockStates: () => {
+      if (HA_CONFIG.connected) {
+        fetchAllLockStates();
+      }
     },
 
     // Open remote modal
@@ -962,20 +1006,16 @@ const LockModule = (() => {
       // After all remotes are created, fetch their initial states if HA is connected
       if (HA_CONFIG.connected) {
         setTimeout(() => {
-          remotesData.forEach((data, remoteId) => {
-            if (data.config.entityId) {
-              fetchInitialLockState(remoteId, data.config.entityId);
-            }
-          });
+          fetchAllLockStates();
         }, 1000);
-      } else {
-        // Set default states for all remotes
-        setTimeout(() => {
-          remotesData.forEach((data, remoteId) => {
-            updateLockUI(remoteId, false, false);
-          });
-        }, 500);
-      }
+} else {
+  // Set default states for all remotes
+  setTimeout(() => {
+    remotesData.forEach((data, remoteId) => {
+      updateLockUI(remoteId, false, false);
+    });
+  }, 500);
+}
     },
 
     // Clear all remotes
@@ -1151,6 +1191,7 @@ lockStyle.textContent = `
 
   .lock-remote-main-button.locked {
     box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+    background-color: rgba(0, 255, 0, 0.1);
   }
 
   .lock-remote-main-button.locked i {
@@ -1159,6 +1200,7 @@ lockStyle.textContent = `
 
   .lock-remote-main-button.unlocked {
     box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+    background-color: rgba(255, 0, 0, 0.1);
   }
 
   .lock-remote-main-button.unlocked i {
@@ -1167,6 +1209,7 @@ lockStyle.textContent = `
 
   .lock-remote-main-button.processing {
     box-shadow: 0 0 15px rgba(255, 165, 0, 0.6);
+    background-color: rgba(255, 165, 0, 0.1);
     animation: pulse 1.5s infinite;
   }
 

@@ -1,726 +1,948 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Switch Panel · fixed touch + back to grid</title>
-    <!-- Font Awesome 6 (free) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Door Sensor – FontAwesome + displayName (9 chars)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* === GLOBAL === */
-        body {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            width: 100%;
+            height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            background-color: white;
+            background: transparent;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
-        .main-button {
-            width: 60px; height: 60px; background: white; border: none; border-radius: 8px;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1); transition: all 0.2s;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation; /* improve touch response */
+        /* main button container – holds icon + tiny name */
+        .sensor-button {
+            width: 52px;
+            /* slightly taller to accommodate name */
+            min-width: 52px;
+            background: linear-gradient(145deg, #ffffff, #f5f5f5);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 6px 0 3px 0;
+            /* top:6px, bottom:3px (space for name) */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            line-height: 1;
         }
-        .main-button:hover { transform: scale(1.05); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
-        .main-button i { font-size: 24px; color: #333; }
 
-        /* === SINGLE MODAL – fixed size === */
+        .sensor-button:hover {
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+            transform: translate(-50%, -50%) scale(1.02);
+        }
+
+        .sensor-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* icon area (font‑awesome replaces svg) */
+        .sensor-button .icon {
+            font-size: 24px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+            color: #4b5563;
+            /* fallback, will be overridden */
+        }
+
+        /* tiny name label – exactly 9 char limit */
+        .sensor-button .state-name {
+            font-size: 7px;
+            font-weight: 500;
+            max-width: 46px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+            margin-top: 2px;
+            color: #1f2937;
+            background: rgba(255, 255, 255, 0.5);
+            padding: 1px 4px;
+            border-radius: 20px;
+            backdrop-filter: blur(1px);
+            transition: background 0.2s;
+        }
+
+        .sensor-button .status-dot {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .drag-hint {
+            position: absolute;
+            bottom: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            color: #6b7280;
+            white-space: nowrap;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2px 10px;
+            border-radius: 20px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        /* modal unchanged (only small adapt for FA) */
         .modal {
+            /* ... same as original (keep all styles) ... */
             display: none;
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
             z-index: 1000;
             justify-content: center;
             align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
+            padding: 12px;
         }
-        .modal.show { display: flex; }
 
         .modal-content {
-            background-color: white;
-            padding: 24px 20px;
+            background: #fff;
+            padding: 16px;
             border-radius: 12px;
-            width: 340px;
-            min-height: 300px;
-            max-height: 90vh;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            transition: none;
+            width: 100%;
+            max-width: 420px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
 
-        .close-btn {
-            position: absolute; top: 12px; right: 12px;
-            background: none; border: none; font-size: 20px; cursor: pointer; color: #666;
-            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-            border-radius: 4px;
-            touch-action: manipulation;
-            z-index: 10;
+        .modal-content::-webkit-scrollbar {
+            width: 5px;
         }
-        .close-btn:hover { background-color: #f0f0f0; }
+
+        .modal-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
 
         .modal-title {
-            text-align: center;
-            margin: 0 0 20px 0;
-            color: #333;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
             font-size: 18px;
+        }
+
+        .close-modal:hover {
+            background: #f3f4f6;
+            color: #1f2937;
+        }
+
+        .current-state-info {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+            border-radius: 8px;
+            border-left: 3px solid #3b82f6;
+            font-size: 12px;
+        }
+
+        .current-state-info h4 {
+            margin: 0 0 4px 0;
+            color: #1e40af;
+            font-size: 12px;
             font-weight: 600;
         }
 
-        /* === PANELS (hidden/shown) === */
-        .panel {
+        .current-state-value {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-weight: 600;
+            color: #1f2937;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .config-section {
+            margin-bottom: 12px;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .config-header {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #374151;
+            font-size: 13px;
             display: flex;
-            flex-direction: column;
-            flex: 1;
-            width: 100%;
+            justify-content: space-between;
+            align-items: center;
         }
-        .panel.hidden { display: none; }
 
-        /* switch grid */
-        .switch-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin-top: 20px;
-        }
-        .switch-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .switch-button {
-            width: 64px; height: 64px; background: white; border: none; border-radius: 8px;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.2s;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .switch-button:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
-        .switch-button i { font-size: 24px; color: #333; }
-        .switch-button.active { background-color: #FFC107; box-shadow: 0 0 15px rgba(255,193,7,0.4); }
-        .switch-button.active i { color: white; }
-        .switch-label { font-size: 12px; color: #666; text-align: center; font-weight: 500; }
-
-        /* edit form */
-        .edit-form { display: flex; flex-direction: column; gap: 18px; }
-        .form-group { display: flex; flex-direction: column; gap: 6px; }
-        .form-label { font-size: 14px; color: #333; font-weight: 600; }
-        .form-input, .form-select {
-            padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
-            touch-action: manipulation;
-        }
-        .icon-selection { border: 1px solid #ddd; border-radius: 6px; padding: 10px; max-height: 160px; overflow-y: auto; }
-        .icon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .icon-option { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border: 2px solid transparent; border-radius: 6px; cursor: pointer; touch-action: manipulation; }
-        .icon-option.selected { border-color: #FFC107; background-color: rgba(255,193,7,0.08); }
-        .icon-option i { font-size: 20px; }
-        .icon-name { font-size: 8px; }
-        .form-actions { display: flex; gap: 12px; margin-top: 8px; }
-        .form-btn {
-            flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;
-            touch-action: manipulation;
-        }
-        .form-btn.save { background-color: #FFC107; color: #333; }
-        .form-btn.cancel { background-color: #f0f0f0; color: #333; }
-
-        /* control panel – dynamic content, all centered */
-        .control-container {
+        .remove-config {
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 22px;
-            width: 100%;
-            flex: 1;
-            min-height: 200px;
+            transition: all 0.2s;
         }
-        .slider-unit {
+
+        .remove-config:hover {
+            background: #dc2626;
+            color: white;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 10px;
+        }
+
+        .input-group.half {
+            margin-bottom: 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            color: #4b5563;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .input-group input[type="text"] {
             width: 100%;
+            padding: 7px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: all 0.2s;
+            background: #fff;
+        }
+
+        .input-group input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .preview-area {
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            margin-top: 8px;
+        }
+
+        .preview-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #fff;
+            transition: all 0.3s ease;
+            font-size: 20px;
+            color: #4b5563;
+        }
+
+        .preview-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .preview-label {
+            font-size: 10px;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .preview-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #1f2937;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .preview-glow {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            flex-shrink: 0;
+        }
+
+        /* icon selection now uses font-awesome class names */
+        .icon-selection {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+            max-height: 120px;
+            overflow-y: auto;
+            padding: 8px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+        }
+
+        .icon-option {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #f9fafb;
+            transition: all 0.15s;
+            font-size: 18px;
+            color: #4b5563;
+        }
+
+        .icon-option:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .icon-option.selected {
+            border-color: #3b82f6;
+            background: #dbeafe;
+            color: #1f2937;
+        }
+
+        .icon-option i {
+            font-size: 20px;
+        }
+
+        .color-section {
+            margin-top: 10px;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .color-option {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+        }
+
+        .color-option:hover {
+            transform: scale(1.15);
+            border-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .color-option.selected {
+            border-color: #1f2937;
+            transform: scale(1.15);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .custom-color-wrapper {
+            display: flex;
             align-items: center;
             gap: 6px;
+            margin-left: 4px;
+            padding-left: 8px;
+            border-left: 1px solid #e5e7eb;
         }
-        .slider-label {
-            font-size: 15px; font-weight: 600; color: #222; text-align: center; width: 100%;
+
+        .custom-color-input {
+            position: relative;
+            width: 26px;
+            height: 26px;
         }
-        .dynamic-slider {
-            -webkit-appearance: none; appearance: none;
-            width: 100%; height: 3.5rem;
-            background-color: rgba(0,0,0,0.1); border-radius: 1rem; overflow: hidden; cursor: pointer;
-            touch-action: pan-y; /* allow vertical touch scroll but capture horizontal */
+
+        .custom-color-input input[type="color"] {
+            width: 26px;
+            height: 26px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            padding: 0;
+            background: none;
         }
-        .dynamic-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 0; height: 3.5rem;
-            box-shadow: -20rem 0 0 20rem rgba(0,30,255,0.5);
+
+        .custom-color-input input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
         }
-        .temp-slider {
-            background: linear-gradient(to right, #ffffff 0%, #f2d6a2 20%, #ffc561 40%, #f1ae3a 60%, #f1951d 80%, #f28900 100%);
+
+        .custom-color-input input[type="color"]::-webkit-color-swatch {
+            border: 2px solid transparent;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
         }
-        .temp-slider::-webkit-slider-thumb {
-            width: 6px; height: 3.5rem; background: rgba(255,255,255,0.9); box-shadow: 0 0 8px black; border-radius: 10px;
+
+        .hex-input {
+            width: 70px;
+            padding: 4px 6px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'SF Mono', Monaco, monospace;
+            text-transform: uppercase;
         }
-        .rgb-slider {
-            background: linear-gradient(to right, #ff0000 0%, #ffff00 16.66%, #00ff00 33.33%, #00ffff 50%, #0000ff 66.66%, #ff00ff 83.33%, #ff0000 100%);
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
         }
-        .rgb-slider::-webkit-slider-thumb {
-            width: 6px; height: 3.5rem; background: rgba(255,255,255,0.9); box-shadow: 0 0 8px black; border-radius: 10px;
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s;
         }
-        .control-value {
-            font-size: 15px; color: #333; text-align: center;
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
         }
-        .toggle-placeholder { font-size: 16px; color: #555; padding: 20px; text-align: center; }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            width: 100%;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
+        }
+
+        .btn-add:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 24px;
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .section-label {
+            font-size: 11px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
     </style>
 </head>
+
 <body>
-    <!-- main button -->
-    <button class="main-button" id="mainButton"><i class="fas fa-sliders-h"></i></button>
+    <div class="sensor-container">
+        <button class="sensor-button" id="sensorBtn" disabled>
+            <div class="icon" id="doorIcon"><i class="fa-solid fa-door-closed"></i></div>
+            <div class="state-name" id="stateDisplayName">--</div>
+            <div class="status-dot"></div>
+        </button>
+        <div class="drag-hint">Drag • hold to config</div>
+    </div>
 
-    <!-- SINGLE MODAL – all panels inside -->
-    <div class="modal" id="mainModal">
+    <div class="modal" id="configModal">
         <div class="modal-content">
-            <button class="close-btn" id="closeModalBtn"><i class="fas fa-times"></i></button>
-            
-            <!-- Panel 1: switch grid -->
-            <div id="panelSwitch" class="panel">
-                <div class="modal-title">Switch Panel</div>
-                <div class="switch-grid" id="switchGrid"></div>
+            <div class="modal-header">
+                <div class="modal-title">Sensor Configuration (FontAwesome)</div>
+                <button class="close-modal" id="closeModal">&times;</button>
             </div>
-
-            <!-- Panel 2: edit form -->
-            <div id="panelEdit" class="panel hidden">
-                <div class="modal-title">Edit Switch</div>
-                <form class="edit-form" id="editForm">
-                    <div class="form-group">
-                        <label class="form-label">Name (8 max)</label>
-                        <input type="text" class="form-input" id="switchNameInput" maxlength="8" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Entity ID</label>
-                        <input type="text" class="form-input" id="entityIdInput" placeholder="light.bedroom" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Control type</label>
-                        <select class="form-select" id="controlTypeSelect">
-                            <option value="toggle">Toggle (on/off)</option>
-                            <option value="dimmer">Dimmer (brightness)</option>
-                            <option value="cct">CCT (brightness + temp)</option>
-                            <option value="rgb">RGB (brightness + hue)</option>
-                            <option value="curtain">Curtain (position)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Icon</label>
-                        <div class="icon-selection"><div class="icon-grid" id="iconGrid"></div></div>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="form-btn cancel" id="cancelEditBtn">Cancel</button>
-                        <button type="submit" class="form-btn save">Save</button>
-                    </div>
-                </form>
+            <div class="current-state-info">
+                <h4><i class="fa-solid fa-circle-info"></i> Current State</h4>
+                <div>Entity: <span class="current-state-value" id="currentEntityId">binary_sensor.showroom_door</span>
+                </div>
+                <div>Value: <span class="current-state-value" id="currentStateValue">Unknown</span></div>
             </div>
-
-            <!-- Panel 3: dynamic control (dimmer, cct, rgb, curtain) -->
-            <div id="panelControl" class="panel hidden">
-                <div class="modal-title" id="controlModalTitle">Control</div>
-                <div class="control-container" id="controlContainer"></div>
+            <div id="stateConfigsContainer">
+                <div class="empty-state">No configurations yet. Add one to get started.</div>
+            </div>
+            <button class="btn btn-add" id="addStateBtn"><i class="fa-solid fa-plus"></i> Add State</button>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="saveBtn">Save</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ---------- HA CONFIG ----------
-        const HA_CONFIG = {
-            url: "https://demo.lumihomepro1.com",
-            token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI0OWU5NDM5ZWRjNWM0YTM4OTgzZmE5NzIyNjU0ZjY5MiIsImlhdCI6MTc2ODI5NjI1NSwiZXhwIjoyMDgzNjU2MjU1fQ.5C9sFe538kogRIL63dlwweBJldwhmQ7eoW86GEWls8U",
-            connected: false,
-            socket: null,
-            messageId: 1,
-            entityStates: new Map()   // entity_id -> {state, attributes}
-        };
+        (function () {
+            // ---------- FONT AWESOME ICON LIST (free solid + regular + brands that are safe) ----------
+            const FA_ICONS = [
+                "fa-solid fa-door-open", "fa-solid fa-door-closed", "fa-solid fa-lock", "fa-solid fa-lock-open",
+                "fa-solid fa-circle-check", "fa-solid fa-circle-exclamation", "fa-solid fa-circle-question",
+                "fa-solid fa-bell", "fa-solid fa-volume-high", "fa-solid fa-volume-xmark",
+                "fa-solid fa-lightbulb", "fa-regular fa-lightbulb", "fa-solid fa-bolt", "fa-solid fa-plug",
+                "fa-solid fa-snowflake", "fa-solid fa-fire", "fa-solid fa-fan", "fa-solid fa-wind",
+                "fa-solid fa-droplet", "fa-solid fa-temperature-high", "fa-solid fa-temperature-low",
+                "fa-solid fa-battery-full", "fa-solid fa-battery-quarter", "fa-solid fa-wifi", "fa-solid fa-signal",
+                "fa-solid fa-eye", "fa-solid fa-eye-slash", "fa-solid fa-video", "fa-solid fa-camera",
+                "fa-solid fa-microphone", "fa-solid fa-microphone-slash", "fa-solid fa-music", "fa-solid fa-film",
+                "fa-solid fa-tv", "fa-solid fa-display", "fa-solid fa-mobile", "fa-solid fa-tablet",
+                "fa-solid fa-clock", "fa-solid fa-calendar", "fa-solid fa-sun", "fa-solid fa-moon",
+                "fa-solid fa-cloud", "fa-solid fa-cloud-rain", "fa-solid fa-cloud-sun", "fa-solid fa-smog",
+                "fa-solid fa-tree", "fa-solid fa-leaf", "fa-solid fa-water", "fa-solid fa-house",
+                "fa-solid fa-building", "fa-solid fa-warehouse", "fa-solid fa-person-walking", "fa-solid fa-person-running",
+                "fa-solid fa-car", "fa-solid fa-bicycle", "fa-solid fa-couch", "fa-solid fa-bed",
+                "fa-solid fa-utensils", "fa-solid fa-kitchen-set", "fa-solid fa-shower", "fa-solid fa-soap",
+                "fa-solid fa-key", "fa-solid fa-hand", "fa-regular fa-hand", "fa-solid fa-bell-slash",
+                "fa-solid fa-toggle-on", "fa-solid fa-toggle-off", "fa-solid fa-power-off", "fa-solid fa-download"
+            ];
 
-        // ---------- ICONS – expanded ----------
-        const ICONS = [
-            { class: 'fas fa-toggle-on', name: 'Toggle' },
-            { class: 'fas fa-toggle-off', name: 'ToggleOff' },
-            { class: 'fas fa-sliders-h', name: 'Sliders' },
-            { class: 'fa-solid fa-left-right', name: 'Arrow' },
-            { class: 'fa-solid fa-repeat', name: 'Repeat' },
-            { class: 'fa-solid fa-phone', name: 'Phone' },
-            { class: 'fas fa-lightbulb', name: 'Bulb-on' },
-            { class: 'fa-regular fa-lightbulb', name: 'Bulb-off' },
-            { class: 'fa-solid fa-menorah', name: 'DeskLamp' },
-            { class: 'fa-solid fa-fire-flame-curved', name: 'Flame' },
-            { class: 'fa-solid fa-laptop', name: 'Laptop' },
-            { class: 'fas fa-power-off', name: 'Power' },
-            { class: 'fas fa-plug', name: 'Plug' },
-            { class: 'fas fa-plug-circle-bolt', name: 'PlugBolt' },
-            { class: 'fas fa-battery-full', name: 'Battery' },
-            { class: 'fas fa-battery-quarter', name: 'BatteryLow' },
-            { class: 'fas fa-fan', name: 'Fan' },
-            { class: 'fas fa-wind', name: 'Wind' },
-            { class: 'fas fa-thermometer-half', name: 'Temp' },
-            { class: 'fas fa-thermometer-full', name: 'TempHot' },
-            { class: 'fas fa-thermometer-empty', name: 'TempCold' },
-            { class: 'fas fa-snowflake', name: 'Snow' },
-            { class: 'fas fa-fire', name: 'Fire' },
-            { class: 'fas fa-droplet', name: 'Humidity' },
-            { class: 'fas fa-tv', name: 'TV' },
-            { class: 'fa-brands fa-chromecast', name: 'Cast' },
-            { class: 'fa-solid fa-bullhorn', name: 'Speaker' },
-            { class: 'fas fa-volume-up', name: 'Volume' },
-            { class: 'fas fa-music', name: 'Music' },
-            { class: 'fas fa-headphones', name: 'Headphones' },
-            { class: 'fas fa-microphone', name: 'Mic' },
-            { class: 'fas fa-radio', name: 'Radio' },
-            { class: 'fa-solid fa-window-maximize', name: 'Blinds' },
-            { class: 'fa-regular fa-window-maximize', name: 'BlindsOpen' },
-            { class: 'fa-solid fa-person-booth', name: 'Curtain' },
-            { class: 'fas fa-window-maximize', name: 'Window' },
-            { class: 'fa-brands fa-microsoft', name: 'WindowMin' },
-            { class: 'fas fa-door-open', name: 'Door' },
-            { class: 'fas fa-door-closed', name: 'DoorClosed' },
-            { class: 'fas fa-lock', name: 'Lock' },
-            { class: 'fas fa-lock-open', name: 'Unlock' },
-            { class: 'fas fa-key', name: 'Key' },
-            { class: 'fas fa-camera', name: 'Camera' },
-            { class: 'fas fa-video', name: 'Video' },
-            { class: 'fas fa-bell', name: 'Bell' },
-            { class: 'fa-solid fa-bell-concierge', name: 'BellPlus' },
-            { class: 'fa-solid fa-square-parking', name: 'Parking' },
-            { class: 'fa-solid fa-car', name: 'GarageOpen' },
-            { class: 'fas fa-car', name: 'Car' },
-            { class: 'fas fa-truck', name: 'Truck' },
-            { class: 'fas fa-sun', name: 'Sun' },
-            { class: 'fas fa-moon', name: 'Moon' },
-            { class: 'fas fa-cloud', name: 'Cloud' },
-            { class: 'fas fa-cloud-rain', name: 'Rain' },
-            { class: 'fas fa-bolt', name: 'Bolt' },
-            { class: 'fas fa-umbrella', name: 'Umbrella' },
-            { class: 'fas fa-water', name: 'Water' },
-            { class: 'fas fa-wind', name: 'Breeze' },
-            { class: 'fas fa-robot', name: 'Robot' },
-            { class: 'fas fa-gamepad', name: 'Gamepad' },
-            { class: 'fas fa-desktop', name: 'Desktop' },
-            { class: 'fas fa-laptop', name: 'Laptop' },
-            { class: 'fas fa-mobile-alt', name: 'Mobile' },
-            { class: 'fas fa-tablet-alt', name: 'Tablet' },
-            { class: 'fas fa-wifi', name: 'WiFi' },
-            { class: 'fa-brands fa-bluetooth', name: 'BT' },
-            { class: 'fas fa-clock', name: 'Clock' },
-            { class: 'fas fa-calendar', name: 'Calendar' },
-            { class: 'fas fa-bed', name: 'Bed' },
-            { class: 'fas fa-couch', name: 'Couch' },
-            { class: 'fas fa-dumbbell', name: 'Gym' },
-            { class: 'fas fa-dog', name: 'Pet' },
-            { class: 'fas fa-cat', name: 'Cat' }
-        ];
+            // WebSocket / HA config
+            const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
+            const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
+            const DOOR_SENSOR_ENTITY = "binary_sensor.showroom_door_sensor_window_door_is_open";
 
-        // switches array
-        let switches = [
-            { name: "Light", icon: 'fas fa-lightbulb', entityId: "light.living_room", active: false, _lastToggle: 0, controlType: 'dimmer' },
-            { name: "TV", icon: 'fas fa-tv', entityId: "media_player.tv", active: false, _lastToggle: 0, controlType: 'toggle' },
-            { name: "Fan", icon: 'fas fa-fan', entityId: "fan.living_room", active: false, _lastToggle: 0, controlType: 'dimmer' },
-            { name: "Plug", icon: 'fas fa-plug', entityId: "switch.plug1", active: false, _lastToggle: 0, controlType: 'toggle' },
-            { name: "Curtain", icon: 'fas fa-curtain', entityId: "cover.living_room", active: false, _lastToggle: 0, controlType: 'curtain' },
-            { name: "CCT", icon: 'fas fa-sliders-h', entityId: "light.rgbw_1", active: false, _lastToggle: 0, controlType: 'cct' }
-        ];
+            // Default configs using FontAwesome classes
+            const DEFAULT_CONFIGS = [
+                { stateValue: 'on', displayName: 'Open', icon: 'fa-solid fa-door-open', color: '#ef4444' },
+                { stateValue: 'off', displayName: 'Closed', icon: 'fa-solid fa-door-closed', color: '#22c55e' },
+                { stateValue: 'unknown', displayName: 'Unknown', icon: 'fa-solid fa-circle-question', color: '#f59e0b' }
+            ];
 
-        // DOM elements
-        const mainModal = document.getElementById('mainModal');
-        const closeModalBtn = document.getElementById('closeModalBtn');
-        const panelSwitch = document.getElementById('panelSwitch');
-        const panelEdit = document.getElementById('panelEdit');
-        const panelControl = document.getElementById('panelControl');
-        const switchGrid = document.getElementById('switchGrid');
-        const editForm = document.getElementById('editForm');
-        const switchNameInput = document.getElementById('switchNameInput');
-        const entityIdInput = document.getElementById('entityIdInput');
-        const controlTypeSelect = document.getElementById('controlTypeSelect');
-        const iconGrid = document.getElementById('iconGrid');
-        const cancelEditBtn = document.getElementById('cancelEditBtn');
-        const controlContainer = document.getElementById('controlContainer');
-        const controlModalTitle = document.getElementById('controlModalTitle');
+            const AVAILABLE_COLORS = [
+                '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6',
+                '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e'
+            ];
 
-        let currentEditIndex = -1;
-        let selectedIcon = 'fas fa-lightbulb';
-        let activeControlIndex = -1;
+            let stateConfigurations = [];
+            let ws, currentSensorState = null, ready = false;
 
-        // ---------- init ----------
-        function init() {
-            populateIconGrid();
-            renderSwitches();
-            setupEventListeners();
-            connectToHA();
-        }
+            // DOM elements
+            const sensorBtn = document.getElementById('sensorBtn');
+            const doorIcon = document.getElementById('doorIcon');        // <i> container
+            const stateNameSpan = document.getElementById('stateDisplayName');
+            const configModal = document.getElementById('configModal');
+            const currentStateValue = document.getElementById('currentStateValue');
 
-        function populateIconGrid() {
-            iconGrid.innerHTML = '';
-            ICONS.forEach(icon => {
-                const div = document.createElement('div');
-                div.className = 'icon-option';
-                div.dataset.icon = icon.class;
-                div.innerHTML = `<i class="${icon.class}"></i><div class="icon-name">${icon.name}</div>`;
-                iconGrid.appendChild(div);
-                div.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    document.querySelectorAll('.icon-option').forEach(opt => opt.classList.remove('selected'));
-                    div.classList.add('selected');
-                    selectedIcon = icon.class;
-                });
-            });
-        }
+            // ----- helpers -----
+            function openConfigModal() { configModal.style.display = 'flex'; loadStateConfigurations(); }
+            function closeConfigModal() { configModal.style.display = 'none'; }
 
-        function renderSwitches() {
-            switchGrid.innerHTML = '';
-            switches.forEach((sw, idx) => {
-                const item = document.createElement('div');
-                item.className = 'switch-item';
-                const btn = document.createElement('button');
-                btn.className = `switch-button ${sw.active ? 'active' : ''}`;
-                btn.dataset.index = idx;
-                btn.innerHTML = `<i class="${sw.icon}" style="color:${sw.active?'white':'#333'}"></i>`;
-                const label = document.createElement('div');
-                label.className = 'switch-label';
-                label.textContent = sw.name;
-                item.appendChild(btn); item.appendChild(label);
-                switchGrid.appendChild(item);
-                setupSwitchEvents(btn, idx);
-            });
-        }
-
-        function setupSwitchEvents(btn, idx) {
-            let pressTimer;
-            const start = (e) => { 
-                e.preventDefault(); 
-                pressTimer = setTimeout(() => openEditPanel(idx), 500); // shorter for testing, but 1500 is fine
-            };
-            const clear = () => clearTimeout(pressTimer);
-            
-            // Use pointer events for better touch/mouse unification
-            btn.addEventListener('pointerdown', start);
-            btn.addEventListener('pointerup', clear);
-            btn.addEventListener('pointerleave', clear);
-            btn.addEventListener('pointercancel', clear);
-            
-            // Click is separate
-            btn.addEventListener('click', (e) => { 
-                e.stopPropagation(); 
-                handleSwitchClick(idx); 
-            });
-            
-            btn.addEventListener('contextmenu', e => e.preventDefault());
-        }
-
-        function handleSwitchClick(index) {
-            const sw = switches[index];
-            if (!sw.entityId) return openEditPanel(index);
-            if (sw.controlType === 'toggle') {
-                toggleSwitch(index);
-            } else {
-                openControlPanel(index);
+            // ----- load/save configs -----
+            function loadSavedConfigurations() {
+                try {
+                    const saved = localStorage.getItem('sensorStateConfigsFA');
+                    stateConfigurations = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_CONFIGS));
+                } catch { stateConfigurations = JSON.parse(JSON.stringify(DEFAULT_CONFIGS)); }
             }
-        }
 
-        // open control panel (inside same modal)
-        function openControlPanel(index) {
-            activeControlIndex = index;
-            const sw = switches[index];
-            controlModalTitle.textContent = sw.name + ' control';
-            renderControlUI(sw);
-            panelSwitch.classList.add('hidden');
-            panelEdit.classList.add('hidden');
-            panelControl.classList.remove('hidden');
-        }
-
-        // open edit panel (long press)
-        function openEditPanel(index) {
-            currentEditIndex = index;
-            const sw = switches[index];
-            switchNameInput.value = sw.name;
-            entityIdInput.value = sw.entityId;
-            controlTypeSelect.value = sw.controlType || 'toggle';
-            selectedIcon = sw.icon;
-            document.querySelectorAll('.icon-option').forEach(opt => {
-                opt.classList.remove('selected');
-                if (opt.dataset.icon === sw.icon) opt.classList.add('selected');
-            });
-            panelSwitch.classList.add('hidden');
-            panelControl.classList.add('hidden');
-            panelEdit.classList.remove('hidden');
-        }
-
-        // back to switch panel (called after cancel/save OR when close button is pressed in control/edit)
-        function showSwitchPanel() {
-            panelEdit.classList.add('hidden');
-            panelControl.classList.add('hidden');
-            panelSwitch.classList.remove('hidden');
-            activeControlIndex = -1;
-            currentEditIndex = -1;
-        }
-
-        // ---- HA helpers ----
-        function getEntityState(entityId) {
-            return HA_CONFIG.entityStates.get(entityId) || { state: '', attributes: {} };
-        }
-        function getBrightness(entityId) {
-            const ent = getEntityState(entityId);
-            if (ent.attributes && ent.attributes.brightness != null) {
-                return Math.round((ent.attributes.brightness / 255) * 100);
-            }
-            return 0;
-        }
-        function getCurtainPosition(entityId) {
-            const ent = getEntityState(entityId);
-            if (ent.attributes && ent.attributes.current_position != null) return ent.attributes.current_position;
-            return 0;
-        }
-        function getColorTemp(entityId) {
-            const ent = getEntityState(entityId);
-            if (ent.attributes && ent.attributes.color_temp != null) {
-                const minMireds = 153, maxMireds = 500;
-                let percent = (ent.attributes.color_temp - minMireds) / (maxMireds - minMireds) * 100;
-                return Math.min(100, Math.max(0, Math.round(percent)));
-            }
-            return 50;
-        }
-        function getHue(entityId) {
-            const ent = getEntityState(entityId);
-            if (ent.attributes && ent.attributes.hs_color && ent.attributes.hs_color[0] != null) return Math.round(ent.attributes.hs_color[0]);
-            return 0;
-        }
-
-        function renderControlUI(sw) {
-            const type = sw.controlType;
-            let html = '';
-            if (type === 'dimmer') {
-                let b = getBrightness(sw.entityId);
-                html = `<div class="slider-unit"><span class="slider-label">Brightness</span>
-                    <input type="range" min="0" max="100" value="${b}" class="dynamic-slider" id="dimmerSlider">
-                    <div class="control-value" id="dimmerValue">${b}%</div></div>`;
-            } else if (type === 'cct') {
-                let b = getBrightness(sw.entityId);
-                let t = getColorTemp(sw.entityId);
-                let kelvin = Math.round(6500 - (t/100)*(6500-2000));
-                html = `<div class="slider-unit"><span class="slider-label">Brightness</span>
-                    <input type="range" min="0" max="100" value="${b}" class="dynamic-slider" id="cctBrightSlider">
-                    <div class="control-value" id="cctBrightValue">${b}%</div></div>
-                    <div class="slider-unit"><span class="slider-label">Color temp</span>
-                    <input type="range" min="0" max="100" value="${t}" class="dynamic-slider temp-slider" id="cctTempSlider">
-                    <div class="control-value" id="cctTempValue">${kelvin}K</div></div>`;
-            } else if (type === 'rgb') {
-                let b = getBrightness(sw.entityId);
-                let h = getHue(sw.entityId);
-                html = `<div class="slider-unit"><span class="slider-label">Brightness</span>
-                    <input type="range" min="0" max="100" value="${b}" class="dynamic-slider" id="rgbBrightSlider">
-                    <div class="control-value" id="rgbBrightValue">${b}%</div></div>
-                    <div class="slider-unit"><span class="slider-label">Hue</span>
-                    <input type="range" min="0" max="360" value="${h}" class="dynamic-slider rgb-slider" id="rgbHueSlider">
-                    <div class="control-value" id="rgbHueValue">Hue ${h}°</div></div>`;
-            } else if (type === 'curtain') {
-                let pos = getCurtainPosition(sw.entityId);
-                html = `<div class="slider-unit"><span class="slider-label">Position</span>
-                    <input type="range" min="0" max="100" value="${pos}" class="dynamic-slider" id="curtainSlider">
-                    <div class="control-value" id="curtainValue">${pos}%</div></div>`;
-            } else {
-                html = '<div class="toggle-placeholder">Toggle mode</div>';
-            }
-            controlContainer.innerHTML = html;
-            attachControlEvents(type, sw);
-        }
-
-        function attachControlEvents(type, sw) {
-            if (type === 'dimmer') {
-                const s = document.getElementById('dimmerSlider');
-                const v = document.getElementById('dimmerValue');
-                if (s) {
-                    s.addEventListener('input', (e) => v.textContent = e.target.value + '%');
-                    s.addEventListener('change', (e) => {
-                        let val = parseInt(e.target.value);
-                        callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: val });
-                    });
-                }
-            }
-            if (type === 'cct') {
-                const bs = document.getElementById('cctBrightSlider');
-                const bv = document.getElementById('cctBrightValue');
-                if (bs) {
-                    bs.addEventListener('input', (e) => bv.textContent = e.target.value + '%');
-                    bs.addEventListener('change', (e) => {
-                        callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: parseInt(e.target.value) });
-                    });
-                }
-                const ts = document.getElementById('cctTempSlider');
-                const tv = document.getElementById('cctTempValue');
-                if (ts) {
-                    const updateTemp = (val) => { let k = Math.round(6500 - (val/100)*(6500-2000)); tv.textContent = k+'K'; };
-                    ts.addEventListener('input', (e) => updateTemp(e.target.value));
-                    ts.addEventListener('change', (e) => {
-                        let mireds = Math.round(153 + (500-153)*(e.target.value/100));
-                        callService('light', 'turn_on', { entity_id: sw.entityId, color_temp: mireds });
-                    });
-                }
-            }
-            if (type === 'rgb') {
-                const bs = document.getElementById('rgbBrightSlider');
-                const bv = document.getElementById('rgbBrightValue');
-                if (bs) {
-                    bs.addEventListener('input', (e) => bv.textContent = e.target.value+'%');
-                    bs.addEventListener('change', (e) => {
-                        callService('light', 'turn_on', { entity_id: sw.entityId, brightness_pct: parseInt(e.target.value) });
-                    });
-                }
-                const hs = document.getElementById('rgbHueSlider');
-                const hv = document.getElementById('rgbHueValue');
-                if (hs) {
-                    hs.addEventListener('input', (e) => hv.textContent = `Hue ${e.target.value}°`);
-                    hs.addEventListener('change', (e) => {
-                        let h = parseInt(e.target.value);
-                        callService('light', 'turn_on', { entity_id: sw.entityId, hs_color: [h, 100] });
-                    });
-                }
-            }
-            if (type === 'curtain') {
-                const s = document.getElementById('curtainSlider');
-                const v = document.getElementById('curtainValue');
-                if (s) {
-                    s.addEventListener('input', (e) => v.textContent = e.target.value+'%');
-                    s.addEventListener('change', (e) => {
-                        callService('cover', 'set_cover_position', { entity_id: sw.entityId, position: parseInt(e.target.value) });
-                    });
-                }
-            }
-        }
-
-        function callService(domain, service, data) {
-            if (!HA_CONFIG.connected || !HA_CONFIG.socket) return;
-            HA_CONFIG.socket.send(JSON.stringify({
-                id: HA_CONFIG.messageId++,
-                type: 'call_service',
-                domain, service,
-                service_data: data
-            }));
-        }
-
-        async function toggleSwitch(index) {
-            const sw = switches[index];
-            if (!sw.entityId) return openEditPanel(index);
-            const now = Date.now();
-            if (sw._lastToggle && (now - sw._lastToggle) < 500) return;
-            const current = sw.active;
-            sw.active = !current;
-            renderSwitches();
-            try {
-                if (HA_CONFIG.connected && HA_CONFIG.socket) {
-                    const domain = sw.entityId.split('.')[0];
-                    callService(domain, 'toggle', { entity_id: sw.entityId });
-                    sw._lastToggle = Date.now();
-                } else { sw.active = current; renderSwitches(); }
-            } catch { sw.active = current; renderSwitches(); }
-        }
-
-        // ---------- HA WebSocket ----------
-        function connectToHA() {
-            const wsUrl = 'wss://demo.lumihomepro1.com/api/websocket';
-            HA_CONFIG.socket = new WebSocket(wsUrl);
-            HA_CONFIG.socket.onopen = () => HA_CONFIG.socket.send(JSON.stringify({type:'auth', access_token:HA_CONFIG.token}));
-            HA_CONFIG.socket.onmessage = (event) => {
-                const msg = JSON.parse(event.data);
-                if (msg.type === 'auth_ok') {
-                    HA_CONFIG.connected = true;
-                    HA_CONFIG.socket.send(JSON.stringify({id: HA_CONFIG.messageId++, type:'get_states'}));
-                    HA_CONFIG.socket.send(JSON.stringify({id: HA_CONFIG.messageId++, type:'subscribe_events', event_type:'state_changed'}));
-                }
-                else if (msg.type === 'result' && msg.id === 1) {
-                    if (msg.result) {
-                        msg.result.forEach(ent => HA_CONFIG.entityStates.set(ent.entity_id, ent));
-                        updateSwitchesFromHA();
+            // ----- update main button (icon + tiny name + glow) -----
+            async function updateSensorButton() {
+                if (!currentSensorState || stateConfigurations.length === 0) return;
+                const stateStr = String(currentSensorState).toLowerCase().trim();
+                const match = stateConfigurations.find(c => c.stateValue.toLowerCase().trim() === stateStr);
+                if (match) {
+                    // set icon via FA class
+                    doorIcon.innerHTML = `<i class="${match.icon}" style="color: ${match.color}; font-size:24px;"></i>`;
+                    // display name: limit to 9 chars
+                    let name = match.displayName || '?';
+                    if (name.length > 9) name = name.slice(0, 8) + '…';  // 8 chars + ellipsis = 9 visual
+                    stateNameSpan.textContent = name;
+                    stateNameSpan.style.color = '#1f2937';
+                    sensorBtn.style.boxShadow = `0 0 15px ${match.color}, 0 2px 8px rgba(0,0,0,0.08)`;
+                    const statusDot = sensorBtn.querySelector('.status-dot');
+                    if (statusDot) {
+                        statusDot.style.backgroundColor = match.color;
+                        statusDot.style.boxShadow = `0 0 6px ${match.color}`;
                     }
-                }
-                else if (msg.type === 'event' && msg.event?.event_type === 'state_changed') {
-                    const { entity_id, new_state } = msg.event.data;
-                    if (new_state) {
-                        HA_CONFIG.entityStates.set(entity_id, new_state);
-                        updateSwitchesFromHA();
-                        if (activeControlIndex !== -1 && switches[activeControlIndex]?.entityId === entity_id) {
-                            renderControlUI(switches[activeControlIndex]);
-                        }
-                    }
-                }
-            };
-            HA_CONFIG.socket.onclose = () => { HA_CONFIG.connected = false; setTimeout(connectToHA,3000); };
-        }
-
-        function updateSwitchesFromHA() {
-            switches.forEach((sw, idx) => {
-                const ha = HA_CONFIG.entityStates.get(sw.entityId);
-                if (ha) {
-                    sw.active = (ha.state === 'on' || ha.state === 'open' || ha.state === 'true');
-                }
-            });
-            renderSwitches();
-        }
-
-        // ---------- event listeners ----------
-        function setupEventListeners() {
-            mainButton.addEventListener('click', () => {
-                showSwitchPanel();
-                mainModal.classList.add('show');
-            });
-
-            // Close button now returns to switch panel if in edit or control, otherwise closes modal
-            closeModalBtn.addEventListener('click', () => {
-                if (!panelSwitch.classList.contains('hidden')) {
-                    // we are on main grid → close modal
-                    mainModal.classList.remove('show');
                 } else {
-                    // we are in edit or control → go back to switch panel
-                    showSwitchPanel();
+                    doorIcon.innerHTML = `<i class="fa-solid fa-circle-question" style="color: #9ca3af; font-size:24px;"></i>`;
+                    stateNameSpan.textContent = '?';
+                    sensorBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                    const statusDot = sensorBtn.querySelector('.status-dot');
+                    if (statusDot) { statusDot.style.backgroundColor = '#d1d5db'; statusDot.style.boxShadow = 'none'; }
                 }
-            });
+            }
 
-            cancelEditBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                showSwitchPanel();
-            });
+            // ----- render config modal with FA icons -----
+            function createStateConfigHTML(config, index) {
+                const div = document.createElement('div');
+                div.className = 'config-section';
+                div.dataset.index = index;
+                const configId = `fa-config-${index}`;
+                div.innerHTML = `
+                    <div class="config-header"><span>State ${index + 1}</span><button class="remove-config" data-index="${index}">&times;</button></div>
+                    <div class="input-row">
+                        <div class="input-group half"><label>State value</label><input type="text" id="${configId}-state" value="${config.stateValue.replace(/"/g, '&quot;')}" placeholder="on, off"></div>
+                        <div class="input-group half"><label>Display name (max 9)</label><input type="text" id="${configId}-name" value="${config.displayName.replace(/"/g, '&quot;')}" maxlength="9" placeholder="9 chars"></div>
+                    </div>
+                    <div class="input-group"><label><i class="fa-solid fa-icons"></i> Icon (FontAwesome)</label>
+                        <div class="search-icons"><input type="text" placeholder="Search icons..." onkeyup="window.filterFAIcons(this.value, ${index})"></div>
+                        <div class="icon-selection" id="${configId}-faIcons"></div>
+                    </div>
+                    <div class="color-section"><label class="section-label"><i class="fa-solid fa-palette"></i> Color</label>
+                        <div class="color-picker" id="${configId}-colors"></div>
+                    </div>
+                    <div class="preview-area">
+                        <div class="preview-icon" id="${configId}-iconPreview"><i class="${config.icon}" style="color:${config.color}; font-size:20px;"></i></div>
+                        <div class="preview-info"><div class="preview-label">Preview</div><div class="preview-name" id="${configId}-previewName">${config.displayName || 'Untitled'}</div></div>
+                        <div class="preview-glow" id="${configId}-colorPreview" style="background:${config.color}; box-shadow:0 0 12px ${config.color};"></div>
+                    </div>
+                `;
+                return div;
+            }
 
-            editForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                if (currentEditIndex === -1) return;
-                const name = switchNameInput.value.trim().substring(0,8);
-                const entityId = entityIdInput.value.trim();
-                const ctrlType = controlTypeSelect.value;
-                if (!name || !entityId) return;
-                switches[currentEditIndex] = {
-                    ...switches[currentEditIndex],
-                    name, entityId, icon: selectedIcon,
-                    controlType: ctrlType,
-                    active: false, _lastToggle: 0
+            // Populate FA icons inside config
+            function populateFAIconsForConfig(configIndex) {
+                const configId = `fa-config-${configIndex}`;
+                const container = document.getElementById(`${configId}-faIcons`);
+                if (!container) return;
+                container.innerHTML = '';
+                const currentIcon = stateConfigurations[configIndex].icon;
+                const currentColor = stateConfigurations[configIndex].color;
+                FA_ICONS.forEach(iconClass => {
+                    const opt = document.createElement('div');
+                    opt.className = 'icon-option';
+                    if (iconClass === currentIcon) opt.classList.add('selected');
+                    opt.innerHTML = `<i class="${iconClass}" style="font-size:20px; color: ${iconClass === currentIcon ? currentColor : '#4b5563'}"></i>`;
+                    opt.addEventListener('click', () => {
+                        container.querySelectorAll('.icon-option').forEach(el => {
+                            el.classList.remove('selected');
+                            el.querySelector('i')?.style.setProperty('color', '#4b5563');
+                        });
+                        opt.classList.add('selected');
+                        const iEl = opt.querySelector('i');
+                        if (iEl) iEl.style.color = currentColor;
+                        stateConfigurations[configIndex].icon = iconClass;
+                        updatePreviewFromIndex(configIndex);
+                    });
+                    container.appendChild(opt);
+                });
+            }
+
+            function filterFAIcons(searchTerm, configIndex) {
+                const configId = `fa-config-${configIndex}`;
+                const container = document.getElementById(`${configId}-faIcons`);
+                if (!container) return;
+                container.innerHTML = '';
+                const currentIcon = stateConfigurations[configIndex].icon;
+                const currentColor = stateConfigurations[configIndex].color;
+                const filtered = FA_ICONS.filter(name => name.toLowerCase().includes(searchTerm.toLowerCase()));
+                filtered.forEach(iconClass => {
+                    const opt = document.createElement('div');
+                    opt.className = 'icon-option';
+                    if (iconClass === currentIcon) opt.classList.add('selected');
+                    opt.innerHTML = `<i class="${iconClass}" style="font-size:20px; color: ${iconClass === currentIcon ? currentColor : '#4b5563'}"></i>`;
+                    opt.addEventListener('click', () => {
+                        container.querySelectorAll('.icon-option').forEach(el => {
+                            el.classList.remove('selected');
+                            el.querySelector('i')?.style.setProperty('color', '#4b5563');
+                        });
+                        opt.classList.add('selected');
+                        opt.querySelector('i')?.style.setProperty('color', currentColor);
+                        stateConfigurations[configIndex].icon = iconClass;
+                        updatePreviewFromIndex(configIndex);
+                    });
+                    container.appendChild(opt);
+                });
+            }
+            window.filterFAIcons = filterFAIcons; // global for onkeyup
+
+            function populateColorsForConfig(configIndex) {
+                const configId = `fa-config-${configIndex}`;
+                const colorsContainer = document.getElementById(`${configId}-colors`);
+                if (!colorsContainer) return;
+                colorsContainer.innerHTML = '';
+                const currentColor = stateConfigurations[configIndex].color;
+                AVAILABLE_COLORS.forEach(color => {
+                    const opt = document.createElement('div');
+                    opt.className = 'color-option';
+                    opt.style.backgroundColor = color;
+                    if (color === currentColor) opt.classList.add('selected');
+                    opt.addEventListener('click', () => {
+                        colorsContainer.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+                        opt.classList.add('selected');
+                        stateConfigurations[configIndex].color = color;
+                        // also update hex preview
+                        updatePreviewFromIndex(configIndex);
+                        // re-color selected icon in icon grid
+                        const iconContainer = document.getElementById(`${configId}-faIcons`);
+                        if (iconContainer) {
+                            iconContainer.querySelectorAll('.icon-option.selected i').forEach(el => el.style.color = color);
+                        }
+                    });
+                    colorsContainer.appendChild(opt);
+                });
+                // add custom color picker (simple)
+                const customDiv = document.createElement('div');
+                customDiv.className = 'custom-color-wrapper';
+                customDiv.innerHTML = `
+                    <div class="custom-color-input"><input type="color" id="${configId}-customColor" value="${currentColor}"></div>
+                    <input type="text" class="hex-input" id="${configId}-hexInput" value="${currentColor}" maxlength="7">
+                `;
+                colorsContainer.appendChild(customDiv);
+                document.getElementById(`${configId}-customColor`).addEventListener('input', (e) => {
+                    const col = e.target.value;
+                    document.getElementById(`${configId}-hexInput`).value = col;
+                    stateConfigurations[configIndex].color = col;
+                    updatePreviewFromIndex(configIndex);
+                    const iconContainer = document.getElementById(`${configId}-faIcons`);
+                    if (iconContainer) iconContainer.querySelectorAll('.icon-option.selected i').forEach(el => el.style.color = col);
+                });
+                document.getElementById(`${configId}-hexInput`).addEventListener('change', (e) => {
+                    let val = e.target.value;
+                    if (!/^#([0-9A-F]{3}){1,2}$/i.test(val)) return;
+                    document.getElementById(`${configId}-customColor`).value = val;
+                    stateConfigurations[configIndex].color = val;
+                    updatePreviewFromIndex(configIndex);
+                });
+            }
+
+            function updatePreviewFromIndex(index) {
+                const cfg = stateConfigurations[index];
+                if (!cfg) return;
+                const configId = `fa-config-${index}`;
+                const nameEl = document.getElementById(`${configId}-previewName`);
+                if (nameEl) nameEl.textContent = cfg.displayName || 'Untitled';
+                const previewIcon = document.getElementById(`${configId}-iconPreview`);
+                if (previewIcon) previewIcon.innerHTML = `<i class="${cfg.icon}" style="color:${cfg.color}; font-size:20px;"></i>`;
+                const glowEl = document.getElementById(`${configId}-colorPreview`);
+                if (glowEl) { glowEl.style.backgroundColor = cfg.color; glowEl.style.boxShadow = `0 0 12px ${cfg.color}`; }
+                // update main sensor later after save
+            }
+
+            async function loadStateConfigurations() {
+                const container = document.getElementById('stateConfigsContainer');
+                if (!stateConfigurations.length) {
+                    container.innerHTML = '<div class="empty-state">No configurations yet. Add one to get started.</div>';
+                    return;
+                }
+                container.innerHTML = '';
+                for (let i = 0; i < stateConfigurations.length; i++) {
+                    container.appendChild(createStateConfigHTML(stateConfigurations[i], i));
+                    populateFAIconsForConfig(i);
+                    populateColorsForConfig(i);
+                }
+                // attach remove events
+                document.querySelectorAll('.remove-config').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const idx = parseInt(btn.dataset.index, 10);
+                        if (stateConfigurations.length <= 1) { alert('Keep at least one'); return; }
+                        if (confirm('Remove?')) {
+                            stateConfigurations.splice(idx, 1);
+                            loadStateConfigurations();
+                        }
+                    });
+                });
+            }
+
+            function addStateConfig() {
+                stateConfigurations.push({ stateValue: '', displayName: '', icon: 'fa-solid fa-circle-question', color: AVAILABLE_COLORS[0] });
+                loadStateConfigurations();
+            }
+
+            function saveConfigurations() {
+                // collect current input values
+                for (let i = 0; i < stateConfigurations.length; i++) {
+                    const cfg = stateConfigurations[i];
+                    const stateInput = document.getElementById(`fa-config-${i}-state`);
+                    const nameInput = document.getElementById(`fa-config-${i}-name`);
+                    if (stateInput) cfg.stateValue = stateInput.value.trim() || '?';
+                    if (nameInput) cfg.displayName = nameInput.value.trim() || '?';
+                }
+                // validate
+                const valid = stateConfigurations.filter(c => c.stateValue && c.icon);
+                if (valid.length === 0) { alert('Need at least one valid state with icon'); return; }
+                const values = valid.map(c => c.stateValue.toLowerCase());
+                if (new Set(values).size !== values.length) { alert('Duplicate state values'); return; }
+                localStorage.setItem('sensorStateConfigsFA', JSON.stringify(valid));
+                stateConfigurations = valid;
+                updateSensorButton();
+                closeConfigModal();
+            }
+
+            // ----- draggable / longpress (simplified) -----
+            function makeButtonDraggable(btn) {
+                let longPressTimer, isLongPress = false, isDrag = false, startX, startY, origX, origY;
+                btn.addEventListener('mousedown', e => {
+                    longPressTimer = setTimeout(() => { isLongPress = true; openConfigModal(); }, 600);
+                    startX = e.clientX; startY = e.clientY; origX = btn.offsetLeft; origY = btn.offsetTop;
+                });
+                window.addEventListener('mousemove', e => {
+                    if (!longPressTimer) return;
+                    if (Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5) {
+                        clearTimeout(longPressTimer); longPressTimer = null; isDrag = true; isLongPress = false;
+                        btn.style.left = (origX + e.clientX - startX) + 'px';
+                        btn.style.top = (origY + e.clientY - startY) + 'px';
+                    }
+                });
+                window.addEventListener('mouseup', () => {
+                    clearTimeout(longPressTimer); longPressTimer = null;
+                    if (isLongPress && !isDrag) openConfigModal();
+                    isLongPress = false; isDrag = false;
+                });
+                // touch events similarly (simplified)
+                btn.addEventListener('touchstart', e => {
+                    e.preventDefault(); const t = e.touches[0];
+                    longPressTimer = setTimeout(() => { isLongPress = true; openConfigModal(); }, 600);
+                    startX = t.clientX; startY = t.clientY; origX = btn.offsetLeft; origY = btn.offsetTop;
+                });
+                btn.addEventListener('touchmove', e => {
+                    if (!longPressTimer) return; const t = e.touches[0];
+                    if (Math.abs(t.clientX - startX) > 10 || Math.abs(t.clientY - startY) > 10) {
+                        clearTimeout(longPressTimer); longPressTimer = null; isDrag = true; isLongPress = false;
+                        btn.style.left = (origX + t.clientX - startX) + 'px';
+                        btn.style.top = (origY + t.clientY - startY) + 'px';
+                    }
+                });
+                btn.addEventListener('touchend', () => {
+                    clearTimeout(longPressTimer);
+                    if (isLongPress && !isDrag) openConfigModal();
+                    isLongPress = false; isDrag = false;
+                });
+            }
+
+            // ----- websocket (same as original) -----
+            function connectWebSocket() {
+                ws = new WebSocket(WS_URL);
+                ws.onopen = () => ws.send(JSON.stringify({ type: "auth", access_token: TOKEN }));
+                ws.onmessage = (e) => {
+                    const data = JSON.parse(e.data);
+                    if (data.type === "auth_ok") {
+                        ready = true; sensorBtn.disabled = false;
+                        ws.send(JSON.stringify({ id: 1, type: "get_states" }));
+                        setTimeout(() => ws.send(JSON.stringify({ id: 2, type: "subscribe_events", event_type: "state_changed" })), 100);
+                    } else if (data.type === "result" && data.id === 1 && data.success) {
+                        const sensor = data.result.find(e => e.entity_id === DOOR_SENSOR_ENTITY);
+                        if (sensor) { currentSensorState = sensor.state; currentStateValue.textContent = currentSensorState; updateSensorButton(); }
+                    } else if (data.type === "event" && data.event?.event_type === "state_changed" && data.event.data.entity_id === DOOR_SENSOR_ENTITY) {
+                        currentSensorState = data.event.data.new_state.state;
+                        currentStateValue.textContent = currentSensorState;
+                        updateSensorButton();
+                    }
                 };
-                renderSwitches();
-                showSwitchPanel();
-            });
+                ws.onclose = () => { sensorBtn.disabled = true; ready = false; setTimeout(connectWebSocket, 3000); };
+            }
 
-            window.addEventListener('click', (e) => {
-                if (e.target === mainModal) {
-                    mainModal.classList.remove('show');
-                    showSwitchPanel();
-                }
+            // ----- init -----
+            window.addEventListener('DOMContentLoaded', async () => {
+                loadSavedConfigurations();
+                makeButtonDraggable(sensorBtn);
+                document.getElementById('closeModal').addEventListener('click', closeConfigModal);
+                document.getElementById('cancelBtn').addEventListener('click', closeConfigModal);
+                document.getElementById('saveBtn').addEventListener('click', saveConfigurations);
+                document.getElementById('addStateBtn').addEventListener('click', addStateConfig);
+                configModal.addEventListener('click', (e) => { if (e.target === configModal) closeConfigModal(); });
+                connectWebSocket();
+                // initial display
+                updateSensorButton();
             });
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && mainModal.classList.contains('show')) {
-                    mainModal.classList.remove('show');
-                    showSwitchPanel();
-                }
-            });
-        }
-
-        init();
+        })();
     </script>
 </body>
+
 </html>
