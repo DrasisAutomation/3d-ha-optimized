@@ -2116,7 +2116,7 @@ sensorStyle.textContent = `
 
   .sensor-container .sensor-main-button {
     display: flex !important;
-    opacity:0.4;
+    opacity:0.6;
     border-radius:14px;
   }
 `;

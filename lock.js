@@ -1,4 +1,4 @@
-// lock.js - Lock Control Module for 360 Scene Editor with Home Assistant Integration
+// lock.js - Fixed Lock Control Module with Processing State
 
 const LockModule = (() => {
   // Available Font Awesome icons for lock button
@@ -45,16 +45,8 @@ const LockModule = (() => {
 
   let instanceId = 1;
   let remotesData = new Map();
-  let currentEditIndex = -1;
   let selectedIcon = 'fa-lock';
-  let currentRemoteId = null;
   let currentScene = 'scene1';
-  let longPressTimer = null;
-  let longPressButton = null;
-  let processing = false;
-  let isLocked = true;
-  let ws = null;
-  let ready = false;
 
   // ========== HOME ASSISTANT CONFIGURATION ==========
   const HA_CONFIG = {
@@ -63,35 +55,29 @@ const LockModule = (() => {
     connected: false,
     socket: null,
     reconnectAttempts: 0,
-    maxReconnectAttempts: 10, // Increased max attempts
+    maxReconnectAttempts: 10,
     messageId: 1,
     pendingRequests: new Map(),
     autoReconnect: true,
-    reconnectInterval: 3000, // Reduced reconnect interval
-    connectionCheckInterval: null
+    reconnectInterval: 3000
   };
   // ==================================================
 
-  // Initialize WebSocket connection to Home Assistant
+  // Initialize WebSocket connection
   const initWebSocket = () => {
     if (HA_CONFIG.socket && (HA_CONFIG.socket.readyState === WebSocket.OPEN || HA_CONFIG.socket.readyState === WebSocket.CONNECTING)) {
-      console.log('WebSocket already connected or connecting');
       return;
     }
-
-    console.log('Connecting to Home Assistant WebSocket:', HA_CONFIG.url);
 
     try {
       HA_CONFIG.socket = new WebSocket(HA_CONFIG.url);
 
       HA_CONFIG.socket.onopen = () => {
-        console.log('WebSocket connected to Home Assistant');
         HA_CONFIG.reconnectAttempts = 0;
-
-        // Clear any existing connection check interval
-        if (HA_CONFIG.connectionCheckInterval) {
-          clearInterval(HA_CONFIG.connectionCheckInterval);
-        }
+        HA_CONFIG.socket.send(JSON.stringify({ 
+          type: "auth", 
+          access_token: HA_CONFIG.token 
+        }));
       };
 
       HA_CONFIG.socket.onmessage = (event) => {
@@ -99,7 +85,7 @@ const LockModule = (() => {
           const message = JSON.parse(event.data);
           handleWebSocketMessage(message);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('Error parsing message:', error);
         }
       };
 
@@ -108,91 +94,77 @@ const LockModule = (() => {
         HA_CONFIG.connected = false;
       };
 
-      HA_CONFIG.socket.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason);
+      HA_CONFIG.socket.onclose = () => {
         HA_CONFIG.connected = false;
-        ready = false;
-
-        HA_CONFIG.pendingRequests.forEach((request, id) => {
+        
+        HA_CONFIG.pendingRequests.forEach((request) => {
           request.reject(new Error('WebSocket closed'));
         });
         HA_CONFIG.pendingRequests.clear();
 
         if (HA_CONFIG.autoReconnect && HA_CONFIG.reconnectAttempts < HA_CONFIG.maxReconnectAttempts) {
           HA_CONFIG.reconnectAttempts++;
-          console.log(`Reconnecting attempt ${HA_CONFIG.reconnectAttempts} in ${HA_CONFIG.reconnectInterval / 1000} seconds...`);
           setTimeout(initWebSocket, HA_CONFIG.reconnectInterval);
         }
       };
 
     } catch (error) {
       console.error('Error creating WebSocket:', error);
-      HA_CONFIG.connected = false;
     }
   };
-const startPeriodicRefresh = () => {
-  setInterval(() => {
-    if (HA_CONFIG.connected) {
-      fetchAllLockStates();
-    }
-  }, 30000); // Refresh every 30 seconds
-};
-  // Handle WebSocket messages from Home Assistant
+
+  // Handle WebSocket messages
   const handleWebSocketMessage = (message) => {
     switch (message.type) {
       case 'auth_required':
-        console.log('Authentication required');
-        const authMessage = {
-          type: 'auth',
-          access_token: HA_CONFIG.token
-        };
-        HA_CONFIG.socket.send(JSON.stringify(authMessage));
+        HA_CONFIG.socket.send(JSON.stringify({ 
+          type: 'auth', 
+          access_token: HA_CONFIG.token 
+        }));
         break;
 
-case 'auth_ok':
-  console.log('Authentication successful');
-  HA_CONFIG.connected = true;
-  ready = true;
-  HA_CONFIG.reconnectAttempts = 0;
+      case 'auth_ok':
+        console.log('Authentication successful');
+        HA_CONFIG.connected = true;
+        
+        // Get initial states (ID 1)
+        setTimeout(() => {
+          HA_CONFIG.socket.send(JSON.stringify({
+            id: 1,
+            type: "get_states"
+          }));
 
-  // Get initial states immediately
-  setTimeout(() => {
-    fetchAllLockStates();
-  }, 500); // Small delay to ensure connection is fully ready
+          // Subscribe to changes (ID 2)
+          setTimeout(() => {
+            HA_CONFIG.socket.send(JSON.stringify({
+              id: 2,
+              type: "subscribe_events",
+              event_type: "state_changed"
+            }));
+          }, 100);
+        }, 100);
+        break;
 
-  // Subscribe to state changes
-  setTimeout(() => {
-    if (HA_CONFIG.socket && HA_CONFIG.socket.readyState === WebSocket.OPEN) {
-      HA_CONFIG.socket.send(JSON.stringify({
-        id: HA_CONFIG.messageId++,
-        type: "subscribe_events",
-        event_type: "state_changed"
-      }));
-      
-      // Fetch states again after subscription to be sure
-      setTimeout(fetchAllLockStates, 200);
-    }
-  }, 100);
-  startPeriodicRefresh();
-  break;
       case 'auth_invalid':
-        console.error('Authentication failed:', message.message);
+        console.error('Authentication failed');
         HA_CONFIG.connected = false;
-        ready = false;
         HA_CONFIG.socket.close();
         break;
 
       case 'result':
+        if (message.id === 1 && message.success && message.result) {
+          // Handle get_states result
+          updateLockStatesFromResult(message.result);
+        } else if (message.id === 2) {
+          console.log('Subscription confirmed');
+        }
+        
+        // Handle any pending requests
         const pendingRequest = HA_CONFIG.pendingRequests.get(message.id);
         if (pendingRequest) {
           HA_CONFIG.pendingRequests.delete(message.id);
           if (message.success) {
             pendingRequest.resolve(message);
-
-            // Handle get_states result
-            if (message.id && message.result) {
-              updateLockStatesFromResult(message.result);
-            }
           } else {
             pendingRequest.reject(new Error(message.error?.message || 'Command failed'));
           }
@@ -207,45 +179,22 @@ case 'auth_ok':
     }
   };
 
-  // Fetch all lock states
-  const fetchAllLockStates = () => {
-    if (!HA_CONFIG.connected || !HA_CONFIG.socket) {
-      console.log('HA not connected, cannot fetch states');
-      return;
-    }
-
-    const messageId = HA_CONFIG.messageId++;
-    const message = {
-      id: messageId,
-      type: 'get_states'
-    };
-
-    HA_CONFIG.socket.send(JSON.stringify(message));
-  };
-
-const updateLockStatesFromResult = (states) => {
-  console.log('Updating lock states from result');
-  remotesData.forEach((remoteData, remoteId) => {
-    const entityId = remoteData.config.entityId;
-    if (entityId) {
-      const lock = states.find(e => e.entity_id === entityId);
-      if (lock) {
-        const locked = lock.state === "locked";
-        remoteData.isLocked = locked;
-        remoteData.processing = false;
-        // Force UI update for this specific remote
-        updateLockUI(remoteId, locked, false);
-        console.log(`Lock ${entityId} state: ${locked ? 'LOCKED' : 'UNLOCKED'}`);
-        
-        // Also update the toggle switch state
-        const lockToggle = document.getElementById(`${remoteId}-lockToggle`);
-        if (lockToggle) {
-          lockToggle.checked = locked;
+  // Update lock states from get_states result
+  const updateLockStatesFromResult = (states) => {
+    remotesData.forEach((remoteData, remoteId) => {
+      const entityId = remoteData.config.entityId;
+      if (entityId) {
+        const lock = states.find(e => e.entity_id === entityId);
+        if (lock) {
+          const isLocked = lock.state === "locked";
+          remoteData.isLocked = isLocked;
+          remoteData.processing = false;
+          updateLockUI(remoteId, isLocked, false);
+          console.log(`Lock ${entityId}: ${isLocked ? 'LOCKED' : 'UNLOCKED'}`);
         }
       }
-    }
-  });
-};
+    });
+  };
 
   // Handle state change events
   const handleStateChange = (data) => {
@@ -270,11 +219,12 @@ const updateLockStatesFromResult = (states) => {
     });
   };
 
-  // Update Lock UI - centralized function
+  // Update Lock UI - WITH PROCESSING STATE
   const updateLockUI = (remoteId, locked, isProcessing) => {
     const lockToggle = document.getElementById(`${remoteId}-lockToggle`);
     const lockStatus = document.getElementById(`${remoteId}-lockStatus`);
     const mainButton = document.getElementById(`${remoteId}-mainButton`);
+    const lockIcon = document.getElementById(`${remoteId}-lockIcon`);
     const lockSwitchElement = document.getElementById(`${remoteId}-lockSwitch`);
 
     if (lockToggle) lockToggle.checked = locked;
@@ -286,7 +236,7 @@ const updateLockStatesFromResult = (states) => {
         lockStatus.style.color = '#ff9900';
       } else {
         lockStatus.textContent = locked ? 'LOCKED' : 'UNLOCKED';
-        lockStatus.className = 'lock-status';
+        lockStatus.className = `lock-status ${locked ? 'locked' : 'unlocked'}`;
         lockStatus.style.color = locked ? '#33cc33' : '#ff3333';
       }
     }
@@ -299,14 +249,26 @@ const updateLockStatesFromResult = (states) => {
         mainButton.classList.add('processing');
         mainButton.style.boxShadow = '0 0 15px rgba(255, 165, 0, 0.6)';
         mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
+        if (lockIcon) {
+          lockIcon.className = `fas ${locked ? 'fa-lock' : 'fa-unlock'} icon`;
+          lockIcon.style.color = '#ff9900';
+        }
       } else if (locked) {
         mainButton.classList.add('locked');
         mainButton.style.boxShadow = '0 0 15px rgba(0, 255, 0, 0.3)';
         mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
+        if (lockIcon) {
+          lockIcon.className = 'fas fa-lock icon';
+          lockIcon.style.color = '#33cc33';
+        }
       } else {
         mainButton.classList.add('unlocked');
         mainButton.style.boxShadow = '0 0 15px rgba(255, 0, 0, 0.3)';
         mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
+        if (lockIcon) {
+          lockIcon.className = 'fas fa-unlock icon';
+          lockIcon.style.color = '#ff3333';
+        }
       }
     }
 
@@ -319,84 +281,13 @@ const updateLockStatesFromResult = (states) => {
     }
   };
 
-  const fetchInitialLockState = async (remoteId, entityId, retryCount = 0) => {
-  if (!HA_CONFIG.connected || !HA_CONFIG.socket) {
-    console.log('HA not connected, cannot fetch initial state for', entityId);
-    
-    // Try again after delay if within retry limit
-    if (retryCount < 5) {
-      setTimeout(() => {
-        fetchInitialLockState(remoteId, entityId, retryCount + 1);
-      }, 1000);
-    }
-    return;
-  }
-
-  const messageId = HA_CONFIG.messageId++;
-  const message = {
-    id: messageId,
-    type: 'get_states'
-  };
-
-  try {
-    const response = await new Promise((resolve, reject) => {
-      HA_CONFIG.pendingRequests.set(messageId, { resolve, reject });
-      HA_CONFIG.socket.send(JSON.stringify(message));
-      
-      setTimeout(() => {
-        if (HA_CONFIG.pendingRequests.has(messageId)) {
-          HA_CONFIG.pendingRequests.delete(messageId);
-          reject(new Error('Timeout fetching states'));
-        }
-      }, 10000);
-    });
-
-    if (response.success && response.result) {
-      const lock = response.result.find(e => e.entity_id === entityId);
-      if (lock) {
-        const isLocked = lock.state === "locked";
-        const remoteData = remotesData.get(remoteId);
-        if (remoteData) {
-          remoteData.isLocked = isLocked;
-          remoteData.processing = false;
-          updateLockUI(remoteId, isLocked, false);
-          
-          // Force toggle switch update
-          const lockToggle = document.getElementById(`${remoteId}-lockToggle`);
-          if (lockToggle) {
-            lockToggle.checked = isLocked;
-          }
-          
-          console.log(`Lock state for ${entityId}: ${isLocked ? 'LOCKED' : 'UNLOCKED'}`);
-        }
-      } else {
-        console.log(`Lock entity ${entityId} not found, retrying...`);
-        if (retryCount < 5) {
-          setTimeout(() => {
-            fetchInitialLockState(remoteId, entityId, retryCount + 1);
-          }, 1000);
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching initial lock state:', error);
-    if (retryCount < 5) {
-      setTimeout(() => {
-        fetchInitialLockState(remoteId, entityId, retryCount + 1);
-      }, 1000);
-    }
-  }
-};
-
-
-  // Call service via WebSocket
+  // Call service
   const callService = (domain, service, data) => {
     if (!HA_CONFIG.connected || !HA_CONFIG.socket) {
-      console.warn('Home Assistant not connected');
       return Promise.reject('Not connected');
     }
 
-    const messageId = HA_CONFIG.messageId++;
+    const messageId = Date.now();
     const message = {
       id: messageId,
       type: 'call_service',
@@ -411,42 +302,66 @@ const updateLockStatesFromResult = (states) => {
     return new Promise((resolve, reject) => {
       HA_CONFIG.pendingRequests.set(messageId, { resolve, reject });
 
-      // Increased timeout to 10 seconds for lock operations
+      // Longer timeout for lock operations
       setTimeout(() => {
         if (HA_CONFIG.pendingRequests.has(messageId)) {
           HA_CONFIG.pendingRequests.delete(messageId);
-          reject(new Error('Command timeout - lock may still be processing'));
+          reject(new Error('Command timeout'));
         }
       }, 10000);
     });
   };
 
-  // Function to enable body for 3D rotation
-  const enableBodyRotation = () => {
-    document.body.classList.remove('lock-modal-active');
-  };
-
-  // Function to disable body for 3D rotation
-  const disableBodyRotation = () => {
-    document.body.classList.add('lock-modal-active');
-  };
+  // Enable/disable body rotation
+  const enableBodyRotation = () => document.body.classList.remove('lock-modal-active');
+  const disableBodyRotation = () => document.body.classList.add('lock-modal-active');
 
   // Show main panel
   const showMainPanel = (remoteId) => {
-    const panelMain = document.getElementById(`${remoteId}-panelMain`);
-    const panelEdit = document.getElementById(`${remoteId}-panelEdit`);
-
-    if (panelMain && panelEdit) {
-      panelMain.classList.remove('hidden');
-      panelEdit.classList.add('hidden');
-    }
+    document.getElementById(`${remoteId}-panelMain`).classList.remove('hidden');
+    document.getElementById(`${remoteId}-panelEdit`).classList.add('hidden');
   };
 
-  // Create HTML structure for lock remote modal
+  // Send lock/unlock command - WITH PROCESSING STATE
+  const sendLockCommand = (remoteId, shouldLock) => {
+    const remoteData = remotesData.get(remoteId);
+    if (!remoteData) return;
+
+    if (!HA_CONFIG.connected || !HA_CONFIG.socket) {
+      alert('Home Assistant not connected');
+      return;
+    }
+
+    const entityId = remoteData.config.entityId;
+    if (!entityId) {
+      alert('No entity ID configured');
+      return;
+    }
+
+    // Set processing state
+    remoteData.processing = true;
+    updateLockUI(remoteId, shouldLock, true);
+
+    const service = shouldLock ? "lock" : "unlock";
+    
+    callService("lock", service, { entity_id: entityId })
+      .then(result => {
+        console.log('Command sent successfully');
+        // State will be updated via state_changed event
+      })
+      .catch(error => {
+        console.error('Failed to send command:', error);
+        alert('Failed to send command: ' + error.message);
+        
+        // Reset processing state on error
+        remoteData.processing = false;
+        updateLockUI(remoteId, remoteData.isLocked, false);
+      });
+  };
+
+  // Create remote modal
   const createRemoteModal = (position, targetScene, configOverride = null) => {
     const remoteId = `lock-remote-${instanceId++}`;
-
-    // Use provided config or defaults
     const config = configOverride ? { ...DEFAULT_CONFIG, ...configOverride } : { ...DEFAULT_CONFIG };
 
     const container = document.createElement('div');
@@ -467,7 +382,7 @@ const updateLockStatesFromResult = (states) => {
         <i class="fas ${config.icon} icon" id="${remoteId}-lockIcon"></i>
       </button>
 
-      <!-- Main Modal -->
+      <!-- Modal -->
       <div class="lock-remote-modal" id="${remoteId}-modal">
         <div class="lock-remote-modal-content">
           <button class="lock-remote-close-btn" id="${remoteId}-closeModal">
@@ -475,7 +390,7 @@ const updateLockStatesFromResult = (states) => {
           </button>
           
           <button class="lock-remote-edit-btn" id="${remoteId}-editBtn">
-            <i class="fas fa-edit" style="display:none;"></i>
+            <i class="fas fa-edit"></i>
           </button>
 
           <div class="lock-remote-title" id="${remoteId}-modalTitle">${config.friendlyName}</div>
@@ -484,7 +399,7 @@ const updateLockStatesFromResult = (states) => {
           <div id="${remoteId}-panelMain" class="lock-remote-panel">
             <div class="lock-switch-container">
               <label class="lock-switch" id="${remoteId}-lockSwitch">
-                <input type="checkbox" id="${remoteId}-lockToggle" checked />
+                <input type="checkbox" id="${remoteId}-lockToggle" />
                 <span>
                   <em></em>
                 </span>
@@ -507,7 +422,7 @@ const updateLockStatesFromResult = (states) => {
               </div>
 
               <div class="lock-remote-form-group">
-                <label class="lock-remote-form-label">Button Icon (long press)</label>
+                <label class="lock-remote-form-label">Button Icon</label>
                 <div class="lock-remote-icon-grid" id="${remoteId}-iconGrid"></div>
               </div>
 
@@ -528,36 +443,28 @@ const updateLockStatesFromResult = (states) => {
       position: position,
       targetScene: targetScene || '',
       config: config,
-      isLocked: null, // Start with null (unknown state)
+      isLocked: false,
       processing: false,
       container: container,
       visible: true,
       isEditMode: false
     });
-    // Initialize the modal
+
     initRemoteModal(remoteId);
-
-    // Fetch initial lock state if HA is connected, otherwise set default
+    
+    // Set default state
     setTimeout(() => {
-      if (HA_CONFIG.connected && config.entityId) {
-        setTimeout(() => {
-          fetchInitialLockState(remoteId, config.entityId);
-        }, 100);
-      } else {
-        // Default to unlocked state with red glow
-        updateLockUI(remoteId, false, false);
-      }
-    }, 500);
-
+      updateLockUI(remoteId, true, false); 
+    }, 100);
+    
     return remoteId;
   };
 
-  // Initialize a remote modal
+  // Initialize remote modal
   const initRemoteModal = (remoteId) => {
     const remoteData = remotesData.get(remoteId);
     if (!remoteData) return;
 
-    // Get DOM elements
     const modal = document.getElementById(`${remoteId}-modal`);
     const panelMain = document.getElementById(`${remoteId}-panelMain`);
     const panelEdit = document.getElementById(`${remoteId}-panelEdit`);
@@ -577,14 +484,150 @@ const updateLockStatesFromResult = (states) => {
     // Populate icon grid
     populateIconGrid(iconGrid, remoteId, remoteData.config.icon);
 
-    // Setup event listeners
-    setupEventListeners(remoteId, modal, panelMain, panelEdit,
-      mainButton, closeModalBtn, editBtn, cancelEditBtn, saveButton,
-      lockSwitch, lockToggle, lockStatus, entityIdInput, friendlyNameInput,
-      modalTitle, iconGrid, remoteData);
+    // Open modal
+    mainButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      modal.classList.add('show');
+      mainButton.classList.add('active-main');
+      mainButton.style.display = 'none';
+      document.body.classList.add('lock-modal-active');
+      showMainPanel(remoteId);
+      disableBodyRotation();
+    });
+
+    mainButton.addEventListener('touchend', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      modal.classList.add('show');
+      mainButton.classList.add('active-main');
+      mainButton.style.display = 'none';
+      document.body.classList.add('lock-modal-active');
+      showMainPanel(remoteId);
+      disableBodyRotation();
+    });
+
+    // Close modal
+    const closeModal = () => {
+      modal.classList.remove('show');
+      mainButton.classList.remove('active-main');
+      mainButton.style.display = 'flex';
+      document.body.classList.remove('lock-modal-active');
+      enableBodyRotation();
+    };
+
+    closeModalBtn.addEventListener('click', closeModal);
+    closeModalBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      closeModal();
+    });
+
+    // Edit button
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetEditForm(remoteId);
+      remoteData.isEditMode = true;
+      panelMain.classList.add('hidden');
+      panelEdit.classList.remove('hidden');
+    });
+
+    editBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resetEditForm(remoteId);
+      remoteData.isEditMode = true;
+      panelMain.classList.add('hidden');
+      panelEdit.classList.remove('hidden');
+    });
+
+    // Cancel edit
+    cancelEditBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      remoteData.isEditMode = false;
+      panelEdit.classList.add('hidden');
+      panelMain.classList.remove('hidden');
+    });
+
+    cancelEditBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      remoteData.isEditMode = false;
+      panelEdit.classList.add('hidden');
+      panelMain.classList.remove('hidden');
+    });
+
+    // Save button
+    saveButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleSaveButton(remoteId);
+    });
+
+    saveButton.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleSaveButton(remoteId);
+    });
+
+    // Lock switch click - WITH PROCESSING CHECK
+    lockSwitch.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (remoteData.processing) {
+        console.log('Already processing, ignoring click');
+        return;
+      }
+
+      const newState = !remoteData.isLocked;
+      lockToggle.checked = newState;
+      sendLockCommand(remoteId, newState);
+    });
+
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+
+    modal.addEventListener('touchend', (e) => {
+      if (e.target === modal) {
+        e.preventDefault();
+        closeModal();
+      }
+    });
+
+    // Input field handling
+    [entityIdInput, friendlyNameInput].forEach(input => {
+      if (input) {
+        input.addEventListener('click', (e) => e.stopPropagation());
+        input.addEventListener('touchstart', (e) => e.stopPropagation());
+        input.addEventListener('touchend', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          input.focus();
+        });
+      }
+    });
+
+    // Load saved config
+    try {
+      const savedConfig = localStorage.getItem(`lockConfig_${remoteId}`);
+      if (savedConfig) {
+        const parsed = JSON.parse(savedConfig);
+        remoteData.config = { ...remoteData.config, ...parsed };
+        entityIdInput.value = remoteData.config.entityId;
+        friendlyNameInput.value = remoteData.config.friendlyName;
+        modalTitle.textContent = remoteData.config.friendlyName;
+
+        const mainButtonIcon = document.querySelector(`#${remoteId}-mainButton i`);
+        if (mainButtonIcon) {
+          mainButtonIcon.className = `${remoteData.config.icon} icon`;
+        }
+      }
+    } catch (e) {}
   };
 
-  // Populate icon selection grid
+  // Populate icon grid
   const populateIconGrid = (iconGridElement, remoteId, selectedIconClass) => {
     if (!iconGridElement) return;
 
@@ -625,49 +668,6 @@ const updateLockStatesFromResult = (states) => {
     });
   };
 
-  // Send lock/unlock command to Home Assistant
-  const sendLockCommand = (remoteId, shouldLock) => {
-    const remoteData = remotesData.get(remoteId);
-    if (!remoteData) return;
-
-    if (!HA_CONFIG.connected || !HA_CONFIG.socket) {
-      console.warn('Home Assistant not connected');
-      alert('Home Assistant not connected');
-
-      // Toggle locally for demo purposes
-      remoteData.isLocked = shouldLock;
-      updateLockUI(remoteId, shouldLock, false);
-      return;
-    }
-
-    const entityId = remoteData.config.entityId;
-    if (!entityId) {
-      alert('No entity ID configured');
-      return;
-    }
-
-    // Set processing state
-    remoteData.processing = true;
-    updateLockUI(remoteId, shouldLock, true);
-
-    const service = shouldLock ? 'lock' : 'unlock';
-    const serviceData = { entity_id: entityId };
-
-    callService('lock', service, serviceData)
-      .then(result => {
-        console.log('Lock command sent successfully:', result);
-        // State will be updated via state_changed event
-      })
-      .catch(error => {
-        console.error('Failed to send lock command:', error);
-        alert('Failed to send command: ' + error.message);
-
-        // Reset processing state on error
-        remoteData.processing = false;
-        updateLockUI(remoteId, remoteData.isLocked, false);
-      });
-  };
-
   // Reset edit form
   const resetEditForm = (remoteId) => {
     const remoteData = remotesData.get(remoteId);
@@ -676,7 +676,6 @@ const updateLockStatesFromResult = (states) => {
     document.getElementById(`${remoteId}-entityId`).value = remoteData.config.entityId;
     document.getElementById(`${remoteId}-friendlyName`).value = remoteData.config.friendlyName;
 
-    // Reset icon selection
     document.querySelectorAll(`#${remoteId}-iconGrid .lock-remote-icon-option`).forEach(opt => {
       opt.classList.remove('selected');
       if (opt.dataset.icon === remoteData.config.icon) {
@@ -699,12 +698,10 @@ const updateLockStatesFromResult = (states) => {
       return;
     }
 
-    // Update config
     remoteData.config.entityId = entityId;
     remoteData.config.friendlyName = friendlyName || 'Lock Control';
     remoteData.config.icon = selectedIcon;
 
-    // Update UI
     document.getElementById(`${remoteId}-modalTitle`).textContent = remoteData.config.friendlyName;
 
     const mainButtonIcon = document.querySelector(`#${remoteId}-mainButton i`);
@@ -712,279 +709,49 @@ const updateLockStatesFromResult = (states) => {
       mainButtonIcon.className = `${selectedIcon} icon`;
     }
 
-    // Exit edit mode
-    exitEditMode(remoteId);
+    remoteData.isEditMode = false;
+    document.getElementById(`${remoteId}-panelEdit`).classList.add('hidden');
+    document.getElementById(`${remoteId}-panelMain`).classList.remove('hidden');
 
-    // Save to localStorage for persistence across sessions
     try {
       localStorage.setItem(`lockConfig_${remoteId}`, JSON.stringify(remoteData.config));
-    } catch (e) { }
+    } catch (e) {}
 
-    console.log('Lock configuration saved:', remoteData.config);
-
-    // Fetch initial state for the new entity
+    // Fetch updated state
     if (HA_CONFIG.connected && entityId) {
-      fetchInitialLockState(remoteId, entityId);
-    } else {
-      updateLockUI(remoteId, false, false);
+      setTimeout(() => {
+        HA_CONFIG.socket.send(JSON.stringify({
+          id: 1,
+          type: "get_states"
+        }));
+      }, 500);
     }
   };
 
-  // Exit edit mode
-  const exitEditMode = (remoteId) => {
-    const remoteData = remotesData.get(remoteId);
-    if (!remoteData) return;
-
-    remoteData.isEditMode = false;
-
-    document.getElementById(`${remoteId}-panelEdit`).classList.add('hidden');
-    document.getElementById(`${remoteId}-panelMain`).classList.remove('hidden');
-  };
-
-  // Setup all event listeners
-  const setupEventListeners = (remoteId, modal, panelMain, panelEdit,
-    mainButton, closeModalBtn, editBtn, cancelEditBtn, saveButton,
-    lockSwitch, lockToggle, lockStatus, entityIdInput, friendlyNameInput,
-    modalTitle, iconGrid, remoteData) => {
-
-    // Open modal
-    const openModal = () => {
-      modal.classList.add('show');
-      mainButton.classList.add('active-main');
-      mainButton.style.display = 'none';
-      document.body.classList.add('lock-modal-active');
-      showMainPanel(remoteId);
-      disableBodyRotation();
-    };
-
-    mainButton.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openModal();
-    });
-
-    mainButton.addEventListener('touchend', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      openModal();
-    });
-
-    // Close modal
-    const closeModal = () => {
-      modal.classList.remove('show');
-      mainButton.classList.remove('active-main');
-      mainButton.style.display = 'flex';
-      document.body.classList.remove('lock-modal-active');
-      enableBodyRotation();
-    };
-
-    closeModalBtn.addEventListener('click', closeModal);
-    closeModalBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      closeModal();
-    });
-
-    // Edit button - enter edit mode
-    editBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      resetEditForm(remoteId);
-      remoteData.isEditMode = true;
-      panelMain.classList.add('hidden');
-      panelEdit.classList.remove('hidden');
-    });
-
-    editBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      resetEditForm(remoteId);
-      remoteData.isEditMode = true;
-      panelMain.classList.add('hidden');
-      panelEdit.classList.remove('hidden');
-    });
-
-    // Cancel edit
-    cancelEditBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      exitEditMode(remoteId);
-    });
-
-    cancelEditBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      exitEditMode(remoteId);
-    });
-
-    // Save button
-    saveButton.addEventListener('click', (e) => {
-      e.stopPropagation();
-      handleSaveButton(remoteId);
-    });
-
-    saveButton.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      handleSaveButton(remoteId);
-    });
-
-    // Lock switch click
-    lockSwitch.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // If already processing, ignore
-      if (remoteData.processing) {
-        console.log('Already processing, ignoring click');
-        return;
-      }
-
-      const newState = !lockToggle.checked;
-      lockToggle.checked = newState;
-      sendLockCommand(remoteId, newState);
-    });
-
-    // Long press on main button for edit - 800ms hold
-    let longPressTimer = null;
-
-    const startLongPress = (e) => {
-      e.preventDefault();
-      if (longPressTimer) clearTimeout(longPressTimer);
-      longPressTimer = setTimeout(() => {
-        openModal();
-        // After modal opens, show edit panel
-        setTimeout(() => {
-          resetEditForm(remoteId);
-          remoteData.isEditMode = true;
-          panelMain.classList.add('hidden');
-          panelEdit.classList.remove('hidden');
-        }, 100);
-        longPressTimer = null;
-      }, 8000); // hold-edit
-    };
-
-    const cancelLongPress = () => {
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-    };
-
-    mainButton.addEventListener('mousedown', startLongPress);
-    mainButton.addEventListener('mouseup', cancelLongPress);
-    mainButton.addEventListener('mouseleave', cancelLongPress);
-    mainButton.addEventListener('touchstart', startLongPress);
-    mainButton.addEventListener('touchend', cancelLongPress);
-    mainButton.addEventListener('touchcancel', cancelLongPress);
-
-    // Close modal when clicking outside
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        closeModal();
-      }
-    });
-
-    modal.addEventListener('touchend', (e) => {
-      if (e.target === modal) {
-        e.preventDefault();
-        closeModal();
-      }
-    });
-
-    // Prevent propagation for form elements
-    const formElements = [entityIdInput, friendlyNameInput];
-
-    formElements.forEach(input => {
-      if (input) {
-        input.addEventListener('click', (e) => e.stopPropagation());
-        input.addEventListener('touchstart', (e) => e.stopPropagation());
-        input.addEventListener('touchend', (e) => e.stopPropagation());
-      }
-    });
-
-    // Fix input field click issues
-    [entityIdInput, friendlyNameInput].forEach(input => {
-      if (input) {
-        input.addEventListener('click', (e) => {
-          e.stopPropagation();
-        });
-
-        input.addEventListener('touchend', (e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          input.focus();
-        });
-
-        input.addEventListener('mousedown', (e) => {
-          e.stopPropagation();
-        });
-
-        input.addEventListener('touchstart', (e) => {
-          e.stopPropagation();
-        });
-      }
-    });
-
-    // Load saved config from localStorage
-    try {
-      const savedConfig = localStorage.getItem(`lockConfig_${remoteId}`);
-      if (savedConfig) {
-        const parsed = JSON.parse(savedConfig);
-        remoteData.config = { ...remoteData.config, ...parsed };
-        entityIdInput.value = remoteData.config.entityId;
-        friendlyNameInput.value = remoteData.config.friendlyName;
-        modalTitle.textContent = remoteData.config.friendlyName;
-
-        const mainButtonIcon = document.querySelector(`#${remoteId}-mainButton i`);
-        if (mainButtonIcon) {
-          mainButtonIcon.className = `${remoteData.config.icon} icon`;
-        }
-      }
-    } catch (e) { }
-  };
-
-  // Initialize WebSocket on module load
+  // Initialize WebSocket
   initWebSocket();
 
   // Public API
   return {
-    // Create a new remote at a specific position
     createRemote: (position, targetScene, configOverride = null) => {
       const remoteId = createRemoteModal(position, targetScene, configOverride);
-      return {
-        id: remoteId,
-        position: position,
-        targetScene: targetScene || ''
-      };
+      return { id: remoteId, position: position, targetScene: targetScene || '' };
     },
 
-    // Force refresh all lock states
     refreshAllLockStates: () => {
       if (HA_CONFIG.connected) {
-        fetchAllLockStates();
+        HA_CONFIG.socket.send(JSON.stringify({
+          id: 1,
+          type: "get_states"
+        }));
       }
     },
 
-    // Open remote modal
-    openRemoteModal: (remoteId) => {
-      const modal = document.getElementById(`${remoteId}-modal`);
-      const mainButton = document.getElementById(`${remoteId}-mainButton`);
-      if (modal && mainButton) {
-        modal.classList.add('show');
-        mainButton.classList.add('active-main');
-        mainButton.style.display = 'none';
-        document.body.classList.add('lock-modal-active');
-        disableBodyRotation();
-      }
-    },
-
-    // Delete a remote by ID
     deleteRemote: (remoteId) => {
-      const container = document.getElementById(remoteId);
-      if (container) {
-        container.remove();
-      }
+      document.getElementById(remoteId)?.remove();
       return remotesData.delete(remoteId);
     },
 
-    // Get remote data for saving
     getRemotesData: () => {
       const remotes = [];
       remotesData.forEach(remoteData => {
@@ -992,85 +759,57 @@ const updateLockStatesFromResult = (states) => {
           id: remoteData.id,
           position: remoteData.position.toArray ? remoteData.position.toArray() : remoteData.position,
           targetScene: remoteData.targetScene || '',
-          config: {
-            entityId: remoteData.config.entityId,
-            friendlyName: remoteData.config.friendlyName,
-            icon: remoteData.config.icon
-          }
+          config: { ...remoteData.config }
         });
       });
       return remotes;
     },
 
-    // Get specific remote data
-    getRemoteData: (remoteId) => {
-      return remotesData.get(remoteId);
-    },
-
-    // Set current scene for visibility checks
     setCurrentScene: (sceneName) => {
       currentScene = sceneName;
     },
 
-    // Load remotes from data
     loadRemotes: (remotesDataArray) => {
-      // Clear existing remotes
       document.querySelectorAll('.lock-remote-container').forEach(el => el.remove());
       remotesData.clear();
 
-      // Create new remotes with saved config data
       remotesDataArray.forEach(remoteData => {
         const position = Array.isArray(remoteData.position) ?
           new THREE.Vector3().fromArray(remoteData.position) : remoteData.position;
-
-        // Create remote with saved config
         createRemoteModal(position, remoteData.targetScene || '', remoteData.config);
       });
 
-      // After all remotes are created, fetch their initial states if HA is connected
       if (HA_CONFIG.connected) {
         setTimeout(() => {
-          fetchAllLockStates();
+          HA_CONFIG.socket.send(JSON.stringify({
+            id: 1,
+            type: "get_states"
+          }));
         }, 1000);
-} else {
-  // Set default states for all remotes
-  setTimeout(() => {
-    remotesData.forEach((data, remoteId) => {
-      updateLockUI(remoteId, false, false);
-    });
-  }, 500);
-}
+      }
     },
 
-    // Clear all remotes
     clearRemotes: () => {
       document.querySelectorAll('.lock-remote-container').forEach(el => el.remove());
       remotesData.clear();
     },
 
-    // Update remote positions on screen
     updateRemotePositions: (camera) => {
       remotesData.forEach((remoteData, remoteId) => {
         const container = document.getElementById(remoteId);
-        if (!container) return;
+        if (!container || !remoteData.position) return;
 
-        const remote = remotesData.get(remoteId);
-        if (!remote || !remote.position) return;
-
-        // Check if remote should be visible for current scene
-        const shouldBeVisible = !remote.targetScene || remote.targetScene === currentScene;
+        const shouldBeVisible = !remoteData.targetScene || remoteData.targetScene === currentScene;
 
         if (!shouldBeVisible) {
           container.style.display = 'none';
           return;
         }
 
-        // Project 3D position to screen coordinates
-        const screenPoint = remote.position.clone().project(camera);
+        const screenPoint = remoteData.position.clone().project(camera);
         const x = (screenPoint.x * 0.5 + 0.5) * window.innerWidth;
         const y = (-screenPoint.y * 0.5 + 0.5) * window.innerHeight;
 
-        // Only show if in front of camera and on screen
         if (screenPoint.z < 1 &&
           x >= -50 && x <= window.innerWidth + 50 &&
           y >= -50 && y <= window.innerHeight + 50) {
@@ -1086,84 +825,48 @@ const updateLockStatesFromResult = (states) => {
       });
     },
 
-    // Update remote visibility based on current scene
     updateRemoteVisibility: (sceneName) => {
       currentScene = sceneName;
       remotesData.forEach((remoteData, remoteId) => {
         const container = document.getElementById(remoteId);
-        if (container && remoteData) {
+        if (container) {
           const shouldBeVisible = !remoteData.targetScene || remoteData.targetScene === sceneName;
           container.dataset.visible = shouldBeVisible.toString();
-
-          if (!shouldBeVisible) {
-            container.style.display = 'none';
-            container.style.pointerEvents = 'none';
-          } else {
-            container.style.display = 'block';
-            container.style.pointerEvents = 'auto';
-          }
+          container.style.display = shouldBeVisible ? 'block' : 'none';
+          container.style.pointerEvents = shouldBeVisible ? 'auto' : 'none';
         }
       });
     },
 
-    // Home Assistant functions
-    getHAConfig: () => {
-      return {
-        url: HA_CONFIG.url,
-        connected: HA_CONFIG.connected,
-        socketState: HA_CONFIG.socket ? HA_CONFIG.socket.readyState : 'CLOSED'
-      };
-    },
+    getHAConfig: () => ({
+      connected: HA_CONFIG.connected,
+      socketState: HA_CONFIG.socket ? HA_CONFIG.socket.readyState : 'CLOSED'
+    }),
 
-    testHAConnection: () => {
-      return new Promise((resolve) => {
-        if (HA_CONFIG.connected) {
-          resolve({ success: true, message: 'Already connected' });
-        } else {
-          initWebSocket();
-          setTimeout(() => {
-            resolve({ success: HA_CONFIG.connected, message: HA_CONFIG.connected ? 'Connected' : 'Failed to connect' });
-          }, 3000);
-        }
-      });
-    },
-
-    callHAService: (domain, service, data) => {
-      return callService(domain, service, data);
-    },
-
-    // Initialize Home Assistant connection
     initHomeAssistant: async () => {
-      console.log('Initializing Home Assistant WebSocket connection...');
       initWebSocket();
-
       return new Promise((resolve) => {
-        const checkConnection = setInterval(() => {
+        const check = setInterval(() => {
           if (HA_CONFIG.connected) {
-            clearInterval(checkConnection);
-            resolve({ success: true, message: 'Connected to Home Assistant' });
+            clearInterval(check);
+            resolve({ success: true });
           }
-        }, 1000);
-
+        }, 100);
         setTimeout(() => {
-          clearInterval(checkConnection);
-          resolve({ success: false, message: 'Connection timeout' });
-        }, 10000);
+          clearInterval(check);
+          resolve({ success: false });
+        }, 5000);
       });
     },
 
-    // Close WebSocket connection
     disconnectHomeAssistant: () => {
       if (HA_CONFIG.socket) {
         HA_CONFIG.autoReconnect = false;
         HA_CONFIG.socket.close();
         HA_CONFIG.connected = false;
-        ready = false;
-        console.log('Home Assistant WebSocket disconnected');
       }
     },
 
-    // Reconnect WebSocket connection
     reconnectHomeAssistant: () => {
       HA_CONFIG.autoReconnect = true;
       initWebSocket();
@@ -1343,7 +1046,7 @@ lockStyle.textContent = `
     display: none !important;
   }
 
-  /* Lock Switch Styles - Exact original design */
+  /* Lock Switch Styles */
   .lock-switch-container {
     display: flex;
     justify-content: center;
@@ -1401,7 +1104,7 @@ lockStyle.textContent = `
   
   /* ORANGE for PROCESSING - overrides both */
   .lock-switch.processing input + span:before {
-    background: #ffb347 !important;  /* orange */
+    background: #ffb347 !important;
   }
   
   /* Handle position */
@@ -1456,15 +1159,15 @@ lockStyle.textContent = `
     border-top-right-radius: 12px;
     border: 3px solid #f60000;
     border-bottom: 0;
-    width: 18px;
+    width: 14px;
     height: 12px;
-    left: 3px;
-    bottom: 17px;
+    left: 2.5px;
+    bottom: 16px;
     position: absolute;
     z-index: 1;
     transform-origin: 0 100%;
     transition: all 0.45s ease;
-    transform: rotate(-35deg) translate(0, 3px);
+    transform: rotate(-35deg) translate(0px, 3px);
   }
   
   /* GREEN for LOCKED */
@@ -1489,11 +1192,6 @@ lockStyle.textContent = `
   
   .lock-switch.processing input + span:after {
     box-shadow: 0 3px 8px rgba(255, 165, 0, 0.4);
-  }
-  
-  .lock-switch :before,
-  .lock-switch :after {
-    box-sizing: border-box;
   }
 
   .lock-status {
@@ -1631,7 +1329,6 @@ lockStyle.textContent = `
     background: #e0e0e0;
   }
 
-  /* Body state when modal is open */
   body.lock-modal-active {
     touch-action: none !important;
     overflow: hidden !important;
@@ -1663,12 +1360,7 @@ lockStyle.textContent = `
     pointer-events: auto !important;
   }
 
-  /* Hide main button when modal is open */
   .lock-remote-container:has(.lock-remote-modal.show) .lock-remote-main-button {
-    display: none !important;
-  }
-
-  .lock-remote-container .lock-remote-modal.show ~ .lock-remote-main-button {
     display: none !important;
   }
 
