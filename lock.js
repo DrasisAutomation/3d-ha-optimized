@@ -130,7 +130,13 @@ const LockModule = (() => {
       HA_CONFIG.connected = false;
     }
   };
-
+const startPeriodicRefresh = () => {
+  setInterval(() => {
+    if (HA_CONFIG.connected) {
+      fetchAllLockStates();
+    }
+  }, 30000); // Refresh every 30 seconds
+};
   // Handle WebSocket messages from Home Assistant
   const handleWebSocketMessage = (message) => {
     switch (message.type) {
@@ -143,27 +149,32 @@ const LockModule = (() => {
         HA_CONFIG.socket.send(JSON.stringify(authMessage));
         break;
 
-      case 'auth_ok':
-        console.log('Authentication successful');
-        HA_CONFIG.connected = true;
-        ready = true;
-        HA_CONFIG.reconnectAttempts = 0;
+case 'auth_ok':
+  console.log('Authentication successful');
+  HA_CONFIG.connected = true;
+  ready = true;
+  HA_CONFIG.reconnectAttempts = 0;
 
-        // Get initial states immediately
-        fetchAllLockStates();
+  // Get initial states immediately
+  setTimeout(() => {
+    fetchAllLockStates();
+  }, 500); // Small delay to ensure connection is fully ready
 
-        // Subscribe to state changes
-        setTimeout(() => {
-          if (HA_CONFIG.socket && HA_CONFIG.socket.readyState === WebSocket.OPEN) {
-            HA_CONFIG.socket.send(JSON.stringify({
-              id: HA_CONFIG.messageId++,
-              type: "subscribe_events",
-              event_type: "state_changed"
-            }));
-          }
-        }, 100);
-        break;
-
+  // Subscribe to state changes
+  setTimeout(() => {
+    if (HA_CONFIG.socket && HA_CONFIG.socket.readyState === WebSocket.OPEN) {
+      HA_CONFIG.socket.send(JSON.stringify({
+        id: HA_CONFIG.messageId++,
+        type: "subscribe_events",
+        event_type: "state_changed"
+      }));
+      
+      // Fetch states again after subscription to be sure
+      setTimeout(fetchAllLockStates, 200);
+    }
+  }, 100);
+  startPeriodicRefresh();
+  break;
       case 'auth_invalid':
         console.error('Authentication failed:', message.message);
         HA_CONFIG.connected = false;
@@ -212,7 +223,7 @@ const LockModule = (() => {
     HA_CONFIG.socket.send(JSON.stringify(message));
   };
 
- const updateLockStatesFromResult = (states) => {
+const updateLockStatesFromResult = (states) => {
   console.log('Updating lock states from result');
   remotesData.forEach((remoteData, remoteId) => {
     const entityId = remoteData.config.entityId;
@@ -222,8 +233,15 @@ const LockModule = (() => {
         const locked = lock.state === "locked";
         remoteData.isLocked = locked;
         remoteData.processing = false;
+        // Force UI update for this specific remote
         updateLockUI(remoteId, locked, false);
         console.log(`Lock ${entityId} state: ${locked ? 'LOCKED' : 'UNLOCKED'}`);
+        
+        // Also update the toggle switch state
+        const lockToggle = document.getElementById(`${remoteId}-lockToggle`);
+        if (lockToggle) {
+          lockToggle.checked = locked;
+        }
       }
     }
   });
@@ -302,67 +320,73 @@ const LockModule = (() => {
   };
 
   const fetchInitialLockState = async (remoteId, entityId, retryCount = 0) => {
-    if (!HA_CONFIG.connected || !HA_CONFIG.socket) {
-      console.log('HA not connected, cannot fetch initial state for', entityId);
-
-      // Try again after delay if within retry limit
-      if (retryCount < 5) {
-        setTimeout(() => {
-          fetchInitialLockState(remoteId, entityId, retryCount + 1);
-        }, 1000);
-      }
-      return;
+  if (!HA_CONFIG.connected || !HA_CONFIG.socket) {
+    console.log('HA not connected, cannot fetch initial state for', entityId);
+    
+    // Try again after delay if within retry limit
+    if (retryCount < 5) {
+      setTimeout(() => {
+        fetchInitialLockState(remoteId, entityId, retryCount + 1);
+      }, 1000);
     }
+    return;
+  }
 
-    const messageId = HA_CONFIG.messageId++;
-    const message = {
-      id: messageId,
-      type: 'get_states'
-    };
+  const messageId = HA_CONFIG.messageId++;
+  const message = {
+    id: messageId,
+    type: 'get_states'
+  };
 
-    try {
-      const response = await new Promise((resolve, reject) => {
-        HA_CONFIG.pendingRequests.set(messageId, { resolve, reject });
-        HA_CONFIG.socket.send(JSON.stringify(message));
+  try {
+    const response = await new Promise((resolve, reject) => {
+      HA_CONFIG.pendingRequests.set(messageId, { resolve, reject });
+      HA_CONFIG.socket.send(JSON.stringify(message));
+      
+      setTimeout(() => {
+        if (HA_CONFIG.pendingRequests.has(messageId)) {
+          HA_CONFIG.pendingRequests.delete(messageId);
+          reject(new Error('Timeout fetching states'));
+        }
+      }, 10000);
+    });
 
-        // Increased timeout
-        setTimeout(() => {
-          if (HA_CONFIG.pendingRequests.has(messageId)) {
-            HA_CONFIG.pendingRequests.delete(messageId);
-            reject(new Error('Timeout fetching states'));
+    if (response.success && response.result) {
+      const lock = response.result.find(e => e.entity_id === entityId);
+      if (lock) {
+        const isLocked = lock.state === "locked";
+        const remoteData = remotesData.get(remoteId);
+        if (remoteData) {
+          remoteData.isLocked = isLocked;
+          remoteData.processing = false;
+          updateLockUI(remoteId, isLocked, false);
+          
+          // Force toggle switch update
+          const lockToggle = document.getElementById(`${remoteId}-lockToggle`);
+          if (lockToggle) {
+            lockToggle.checked = isLocked;
           }
-        }, 10000);
-      });
-
-      if (response.success && response.result) {
-        const lock = response.result.find(e => e.entity_id === entityId);
-        if (lock) {
-          const isLocked = lock.state === "locked";
-          const remoteData = remotesData.get(remoteId);
-          if (remoteData) {
-            remoteData.isLocked = isLocked;
-            remoteData.processing = false;
-            updateLockUI(remoteId, isLocked, false);
-            console.log(`Lock state for ${entityId}: ${isLocked ? 'LOCKED' : 'UNLOCKED'}`);
-          }
-        } else {
-          console.log(`Lock entity ${entityId} not found, retrying...`);
-          if (retryCount < 5) {
-            setTimeout(() => {
-              fetchInitialLockState(remoteId, entityId, retryCount + 1);
-            }, 1000);
-          }
+          
+          console.log(`Lock state for ${entityId}: ${isLocked ? 'LOCKED' : 'UNLOCKED'}`);
+        }
+      } else {
+        console.log(`Lock entity ${entityId} not found, retrying...`);
+        if (retryCount < 5) {
+          setTimeout(() => {
+            fetchInitialLockState(remoteId, entityId, retryCount + 1);
+          }, 1000);
         }
       }
-    } catch (error) {
-      console.error('Error fetching initial lock state:', error);
-      if (retryCount < 5) {
-        setTimeout(() => {
-          fetchInitialLockState(remoteId, entityId, retryCount + 1);
-        }, 1000);
-      }
     }
-  };
+  } catch (error) {
+    console.error('Error fetching initial lock state:', error);
+    if (retryCount < 5) {
+      setTimeout(() => {
+        fetchInitialLockState(remoteId, entityId, retryCount + 1);
+      }, 1000);
+    }
+  }
+};
 
 
   // Call service via WebSocket
@@ -451,7 +475,7 @@ const LockModule = (() => {
           </button>
           
           <button class="lock-remote-edit-btn" id="${remoteId}-editBtn">
-            <i class="fas fa-edit"></i>
+            <i class="fas fa-edit" style="display:none;"></i>
           </button>
 
           <div class="lock-remote-title" id="${remoteId}-modalTitle">${config.friendlyName}</div>
@@ -833,7 +857,7 @@ const LockModule = (() => {
           panelEdit.classList.remove('hidden');
         }, 100);
         longPressTimer = null;
-      }, 800); // 800ms hold to edit
+      }, 8000); // hold-edit
     };
 
     const cancelLongPress = () => {
