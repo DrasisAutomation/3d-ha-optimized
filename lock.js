@@ -219,67 +219,71 @@ const LockModule = (() => {
     });
   };
 
-  // Update Lock UI - WITH PROCESSING STATE
-  const updateLockUI = (remoteId, locked, isProcessing) => {
-    const lockToggle = document.getElementById(`${remoteId}-lockToggle`);
-    const lockStatus = document.getElementById(`${remoteId}-lockStatus`);
-    const mainButton = document.getElementById(`${remoteId}-mainButton`);
-    const lockIcon = document.getElementById(`${remoteId}-lockIcon`);
-    const lockSwitchElement = document.getElementById(`${remoteId}-lockSwitch`);
+// Update Lock UI - WITH PROCESSING STATE
+const updateLockUI = (remoteId, locked, isProcessing) => {
+  const lockToggle = document.getElementById(`${remoteId}-lockToggle`);
+  const lockStatus = document.getElementById(`${remoteId}-lockStatus`);
+  const mainButton = document.getElementById(`${remoteId}-mainButton`);
+  const lockIcon = document.getElementById(`${remoteId}-lockIcon`);
+  const lockSwitchElement = document.getElementById(`${remoteId}-lockSwitch`);
+  const remoteData = remotesData.get(remoteId);
 
-    if (lockToggle) lockToggle.checked = locked;
+  if (lockToggle) lockToggle.checked = locked;
 
-    if (lockStatus) {
-      if (isProcessing) {
-        lockStatus.textContent = 'PROCESSING...';
-        lockStatus.className = 'lock-status processing';
-        lockStatus.style.color = '#ff9900';
-      } else {
-        lockStatus.textContent = locked ? 'LOCKED' : 'UNLOCKED';
-        lockStatus.className = `lock-status ${locked ? 'locked' : 'unlocked'}`;
-        lockStatus.style.color = locked ? '#33cc33' : '#ff3333';
+  if (lockStatus) {
+    if (isProcessing) {
+      lockStatus.textContent = 'PROCESSING...';
+      lockStatus.className = 'lock-status processing';
+      lockStatus.style.color = '#ff9900';
+    } else {
+      lockStatus.textContent = locked ? 'LOCKED' : 'UNLOCKED';
+      lockStatus.className = `lock-status ${locked ? 'locked' : 'unlocked'}`;
+      lockStatus.style.color = locked ? '#33cc33' : '#ff3333';
+    }
+  }
+
+  if (mainButton) {
+    // Remove all state classes
+    mainButton.classList.remove('locked', 'unlocked', 'processing');
+
+    if (isProcessing) {
+      mainButton.classList.add('processing');
+      mainButton.style.boxShadow = '0 0 15px rgba(255, 165, 0, 0.6)';
+      mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
+      if (lockIcon) {
+        const originalIcon = remoteData?.config?.icon || 'fas fa-lock';
+        lockIcon.className = `${originalIcon} icon`;
+        lockIcon.style.color = '#ff9900';
+      }
+    } else if (locked) {
+      mainButton.classList.add('locked');
+      mainButton.style.boxShadow = '0 0 15px rgba(0, 255, 0, 0.3)';
+      mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
+      if (lockIcon) {
+        const originalIcon = remoteData?.config?.icon || 'fas fa-lock';
+        lockIcon.className = `${originalIcon} icon`;
+        lockIcon.style.color = '#33cc33';
+      }
+    } else {
+      mainButton.classList.add('unlocked');
+      mainButton.style.boxShadow = '0 0 15px rgba(255, 0, 0, 0.3)';
+      mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
+      if (lockIcon) {
+        const originalIcon = remoteData?.config?.icon || 'fas fa-unlock';
+        lockIcon.className = `${originalIcon} icon`;
+        lockIcon.style.color = '#ff3333';
       }
     }
+  }
 
-    if (mainButton) {
-      // Remove all state classes
-      mainButton.classList.remove('locked', 'unlocked', 'processing');
-
-      if (isProcessing) {
-        mainButton.classList.add('processing');
-        mainButton.style.boxShadow = '0 0 15px rgba(255, 165, 0, 0.6)';
-        mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
-        if (lockIcon) {
-          lockIcon.className = `fas ${locked ? 'fa-lock' : 'fa-unlock'} icon`;
-          lockIcon.style.color = '#ff9900';
-        }
-      } else if (locked) {
-        mainButton.classList.add('locked');
-        mainButton.style.boxShadow = '0 0 15px rgba(0, 255, 0, 0.3)';
-        mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
-        if (lockIcon) {
-          lockIcon.className = 'fas fa-lock icon';
-          lockIcon.style.color = '#33cc33';
-        }
-      } else {
-        mainButton.classList.add('unlocked');
-        mainButton.style.boxShadow = '0 0 15px rgba(255, 0, 0, 0.3)';
-        mainButton.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
-        if (lockIcon) {
-          lockIcon.className = 'fas fa-unlock icon';
-          lockIcon.style.color = '#ff3333';
-        }
-      }
+  if (lockSwitchElement) {
+    if (isProcessing) {
+      lockSwitchElement.classList.add('processing');
+    } else {
+      lockSwitchElement.classList.remove('processing');
     }
-
-    if (lockSwitchElement) {
-      if (isProcessing) {
-        lockSwitchElement.classList.add('processing');
-      } else {
-        lockSwitchElement.classList.remove('processing');
-      }
-    }
-  };
+  }
+};
 
   // Call service
   const callService = (domain, service, data) => {
@@ -379,7 +383,7 @@ const LockModule = (() => {
     container.innerHTML = `
       <!-- Main Button -->
       <button class="lock-remote-main-button" id="${remoteId}-mainButton">
-        <i class="fas ${config.icon} icon" id="${remoteId}-lockIcon"></i>
+        <i class="${config.icon} icon" id="${remoteId}-lockIcon"></i>
       </button>
 
       <!-- Modal -->
@@ -390,7 +394,7 @@ const LockModule = (() => {
           </button>
           
           <button class="lock-remote-edit-btn" id="${remoteId}-editBtn">
-            <i class="fas fa-edit"></i>
+            <i class="fas fa-edit" style="display:none !important;"></i>
           </button>
 
           <div class="lock-remote-title" id="${remoteId}-modalTitle">${config.friendlyName}</div>
@@ -1033,7 +1037,6 @@ lockStyle.textContent = `
     color: #333;
     font-size: 24px;
     font-weight: bold;
-    margin-bottom: 25px;
     text-align: center;
     width: 100%;
   }
@@ -1196,12 +1199,10 @@ lockStyle.textContent = `
 
   .lock-status {
     font-size: 14px;
-    margin-top: 10px;
     color: #333;
     text-align: center;
     font-weight: bold;
     width: 100%;
-    margin-bottom: 20px;
   }
 
   .lock-status.locked {

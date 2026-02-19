@@ -412,25 +412,188 @@
           "command": "BACK"
         }
       ]
+    },
+    {
+      "id": "media-remote-2",
+      "position": [
+        494.5852338605834,
+        72.18785270327325,
+        -3.0174712199568607
+      ],
+      "targetScene": "scene1",
+      "buttons": [
+        {
+          "icon": "fas fa-home",
+          "text": "Home",
+          "entityType": "remote",
+          "textColor": "#ffffff",
+          "bgColor": "#2b00ff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "HOME"
+        },
+        {
+          "icon": "fas fa-arrow-up",
+          "text": "Up",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "DPAD_UP"
+        },
+        {
+          "icon": "fas fa-bars",
+          "text": "Menu",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "MENU"
+        },
+        {
+          "icon": "fas fa-arrow-left",
+          "text": "Left",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "DPAD_LEFT"
+        },
+        {
+          "icon": "fas fa-circle",
+          "text": "OK",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "DPAD_CENTER"
+        },
+        {
+          "icon": "fas fa-arrow-right",
+          "text": "Right",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "DPAD_RIGHT"
+        },
+        {
+          "icon": "fas fa-cog",
+          "text": "Settings",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.tv",
+          "service": "remote.send_command",
+          "command": "SETTINGS"
+        },
+        {
+          "icon": "fas fa-arrow-down",
+          "text": "Down",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "DPAD_DOWN"
+        },
+        {
+          "icon": "fas fa-undo",
+          "text": "Back",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "BACK"
+        },
+        {
+          "icon": "fas fa-volume-up",
+          "text": "Vol +",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "VOLUME_UP"
+        },
+        {
+          "icon": "fas fa-volume-mute",
+          "text": "Mute",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "VOLUME_MUTE"
+        },
+        {
+          "icon": "fas fa-volume-down",
+          "text": "New Button",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "VOLUME_DOWN"
+        }
+      ]
     }
   ],
   "lockRemotes": [
     {
       "id": "lock-remote-1",
       "position": [
-        235.30175280741548,
-        79.12092097247964,
-        -433.73360560669835
+        -430.00924578702484,
+        -51.37109504531006,
+        -248.72600056957376
       ],
-      "targetScene": "scene1768371566300",
+      "targetScene": "scene2",
       "config": {
-        "entityId": "lock.m302_b6e10c_2",
-        "friendlyName": "Front Door",
-        "icon": "fas fa-motorcycle"
+        "entityId": "lock.samsung_lock",
+        "friendlyName": "Pantry Door",
+        "icon": "fas fa-door-closed"
       }
     }
   ],
-  "currentScene": "scene1768371566300",
+  "sensors": [
+    {
+      "id": "sensor-2",
+      "position": [
+        -225.19216735407747,
+        62.297983188444654,
+        441.4585622294091
+      ],
+      "targetScene": "scene2",
+      "entityId": "binary_sensor.experiance_room_door_sensor_window_door_is_open",
+      "states": [
+        {
+          "stateValue": "on",
+          "displayName": "Open",
+          "icon": "fas fa-door-open",
+          "color": "#ef4444"
+        },
+        {
+          "stateValue": "off",
+          "displayName": "Closed",
+          "icon": "fas fa-door-closed",
+          "color": "#10b981"
+        },
+        {
+          "stateValue": "unknown",
+          "displayName": "Unknown",
+          "icon": "fas fa-circle-question",
+          "color": "#f59e0b"
+        }
+      ]
+    }
+  ],
+  "currentScene": "scene2",
   "haConfig": {
     "url": "https://demo.lumihomepro1.com",
     "connected": true,

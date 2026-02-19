@@ -1505,7 +1505,7 @@ style.textContent = `
 
   .media-remote-btn {
     background: #ffffff;
-    opacity:0.4;
+    opacity:0.7;
     border: none;
     border-radius: 10px;
     color: #000;

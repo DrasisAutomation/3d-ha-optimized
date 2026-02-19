@@ -1485,3 +1485,45 @@ body.remote-modal-active canvas {
 .remote-modal{
   background-color: transparent !important;
 }
+
+/* Alternative if :has() is not supported */
+.sidebar.open ~ .remote-modal.show,
+.sidebar.open ~ .media-remote-modal.show,
+.sidebar.open ~ .lock-remote-modal.show,
+.sidebar.open ~ .sensor-modal.show {
+  pointer-events: none !important;
+}
+
+.sidebar.open ~ .remote-modal.show .remote-modal-content,
+.sidebar.open ~ .media-remote-modal.show .media-remote-modal-content,
+.sidebar.open ~ .lock-remote-modal.show .lock-remote-modal-content,
+.sidebar.open ~ .sensor-modal.show .sensor-modal-content {
+  pointer-events: none !important;
+}
+
+/* Add to your style.css file - ensure sidebar is above modals when open */
+.sidebar.open {
+  z-index: 10000 !important; /* Higher than any modal */
+}
+
+.sidebar.open .sidebar-header,
+.sidebar.open .scenes-list,
+.sidebar.open .scene-item {
+  position: relative;
+  z-index: 10001; /* Even higher for content */
+}
+
+/* Ensure modal overlays don't block sidebar when it's open */
+body:has(.sidebar.open) .remote-modal.show,
+body:has(.sidebar.open) .media-remote-modal.show,
+body:has(.sidebar.open) .lock-remote-modal.show,
+body:has(.sidebar.open) .sensor-modal.show {
+  pointer-events: none !important; /* Disable modal interaction when sidebar is open */
+}
+
+/* But keep sidebar interactive */
+body:has(.sidebar.open) .sidebar,
+body:has(.sidebar.open) .sidebar * {
+  pointer-events: auto !important;
+  touch-action: auto !important;
+}

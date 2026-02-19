@@ -6,6 +6,7 @@ const MediaRemoteModule = (() => {
     { class: 'fas fa-power-off', name: 'Power' },
     { class: 'fas fa-tv', name: 'TV' },
     { class: 'fas fa-volume-up', name: 'Volume Up' },
+    { class: 'fas fa-volume-down', name: 'Volume Down' },
     { class: 'fas fa-volume-mute', name: 'Mute' },
     { class: 'fas fa-arrow-left', name: 'Left' },
     { class: 'fas fa-home', name: 'Home' },
@@ -1505,7 +1506,7 @@ style.textContent = `
 
   .media-remote-btn {
     background: #ffffff;
-    opacity:0.4;
+    opacity:0.7;
     border: none;
     border-radius: 10px;
     color: #000;
