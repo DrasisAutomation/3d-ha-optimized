@@ -171,21 +171,21 @@
           "name": "Switch 2",
           "icon": "fas fa-lightbulb",
           "entityId": "switch.node_89_2",
-          "active": false,
+          "active": true,
           "controlType": "toggle"
         },
         {
           "name": "Switch 3",
           "icon": "fas fa-power-off",
           "entityId": "switch.node_89_3",
-          "active": false,
+          "active": true,
           "controlType": "toggle"
         },
         {
           "name": "Switch 4",
           "icon": "fas fa-plug",
           "entityId": "switch.node_89_4",
-          "active": false,
+          "active": true,
           "controlType": "toggle"
         },
         {
@@ -217,7 +217,7 @@
           "name": "Fan",
           "icon": "fas fa-fan",
           "entityId": "switch.pantry_r2_2",
-          "active": true,
+          "active": false,
           "controlType": "toggle"
         },
         {
@@ -543,6 +543,67 @@
           "command": "VOLUME_DOWN"
         }
       ]
+    },
+    {
+      "id": "media-remote-3",
+      "position": [
+        242.5433103264278,
+        213.94991205674398,
+        380.85632621386026
+      ],
+      "targetScene": "scene1",
+      "buttons": [
+        {
+          "icon": "fas fa-power-off",
+          "text": "OFF",
+          "entityType": "switch",
+          "textColor": "#ffffff",
+          "bgColor": "#ff0000",
+          "entityId": "switch.exp_room_ac_off",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "fas fa-thermometer-half",
+          "text": "18°C",
+          "entityType": "switch",
+          "textColor": "#0011ff",
+          "bgColor": "#ffffff",
+          "entityId": "switch.exp_room_ac_18",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "fas fa-thermometer-half",
+          "text": "20°C",
+          "entityType": "switch",
+          "textColor": "#4824ff",
+          "bgColor": "#ffffff",
+          "entityId": "switch.exp_room_ac_20",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "fas fa-thermometer-half",
+          "text": "22°C",
+          "entityType": "switch",
+          "textColor": "#001eff",
+          "bgColor": "#ffffff",
+          "entityId": "switch.exp_room_ac_22",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "fas fa-thermometer-half",
+          "text": "24°C",
+          "entityType": "switch",
+          "textColor": "#0011ff",
+          "bgColor": "#ffffff",
+          "entityId": "switch.exp_room_ac_24",
+          "service": "switch.toggle",
+          "command": ""
+        }
+      ]
     }
   ],
   "lockRemotes": [
@@ -563,7 +624,7 @@
   ],
   "sensors": [
     {
-      "id": "sensor-2",
+      "id": "sensor-1",
       "position": [
         -225.19216735407747,
         62.297983188444654,
@@ -593,7 +654,7 @@
       ]
     }
   ],
-  "currentScene": "scene2",
+  "currentScene": "scene1",
   "haConfig": {
     "url": "https://demo.lumihomepro1.com",
     "connected": true,

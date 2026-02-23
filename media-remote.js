@@ -183,17 +183,28 @@ const MediaRemoteModule = (() => {
     console.log('Sending command:', message);
     HA_CONFIG.socket.send(JSON.stringify(message));
     
-    return new Promise((resolve, reject) => {
-      HA_CONFIG.pendingRequests.set(messageId, { resolve, reject });
-      
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        if (HA_CONFIG.pendingRequests.has(messageId)) {
-          HA_CONFIG.pendingRequests.delete(messageId);
-          reject(new Error('Command timeout'));
-        }
-      }, 5000);
-    });
+return new Promise((resolve, reject) => {
+  HA_CONFIG.pendingRequests.set(messageId, { resolve, reject });
+  
+  // Don't set timeout for switch commands since they don't return results
+  if (domain === 'switch') {
+    // For switches, resolve immediately after sending
+    setTimeout(() => {
+      if (HA_CONFIG.pendingRequests.has(messageId)) {
+        HA_CONFIG.pendingRequests.delete(messageId);
+        resolve({ success: true, message: 'Command sent' });
+      }
+    }, 500);
+  } else {
+    // Timeout after 5 seconds for other commands
+    setTimeout(() => {
+      if (HA_CONFIG.pendingRequests.has(messageId)) {
+        HA_CONFIG.pendingRequests.delete(messageId);
+        reject(new Error('Command timeout'));
+      }
+    }, 5000);
+  }
+});
   };
 
   // Darken color helper function
