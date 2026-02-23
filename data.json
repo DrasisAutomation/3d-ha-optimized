@@ -298,7 +298,7 @@
           "name": "CCT LT",
           "icon": "fas fa-sliders-h",
           "entityId": "light.exp_room_light3_light",
-          "active": false,
+          "active": true,
           "controlType": "cct"
         },
         {
@@ -622,6 +622,7 @@
           "bgColor": "#ffffff",
           "entityId": "media_player.z9x_pro",
           "service": "send_key",
+          "command": "",
           "serviceDomain": "zidoo",
           "key": "Key.Home"
         },
@@ -633,6 +634,7 @@
           "bgColor": "#ffffff",
           "entityId": "media_player.z9x_pro",
           "service": "send_key",
+          "command": "",
           "serviceDomain": "zidoo",
           "key": "Key.Up"
         },
@@ -644,6 +646,7 @@
           "bgColor": "#ffffff",
           "entityId": "media_player.z9x_pro",
           "service": "send_key",
+          "command": "",
           "serviceDomain": "zidoo",
           "key": "Key.Menu"
         },
@@ -655,6 +658,7 @@
           "bgColor": "#ffffff",
           "entityId": "media_player.z9x_pro",
           "service": "send_key",
+          "command": "",
           "serviceDomain": "zidoo",
           "key": "Key.Left"
         },
@@ -666,6 +670,7 @@
           "bgColor": "#ffffff",
           "entityId": "media_player.z9x_pro",
           "service": "send_key",
+          "command": "",
           "serviceDomain": "zidoo",
           "key": "Key.Select"
         },
@@ -677,6 +682,7 @@
           "bgColor": "#ffffff",
           "entityId": "media_player.z9x_pro",
           "service": "send_key",
+          "command": "",
           "serviceDomain": "zidoo",
           "key": "Key.Right"
         },
@@ -688,6 +694,7 @@
           "bgColor": "#ffffff",
           "entityId": "media_player.z9x_pro",
           "service": "send_key",
+          "command": "",
           "serviceDomain": "zidoo",
           "key": "Key.file"
         },
@@ -699,6 +706,7 @@
           "bgColor": "#ffffff",
           "entityId": "media_player.z9x_pro",
           "service": "send_key",
+          "command": "",
           "serviceDomain": "zidoo",
           "key": "Key.Down"
         },
@@ -710,8 +718,71 @@
           "bgColor": "#ffffff",
           "entityId": "media_player.z9x_pro",
           "service": "send_key",
+          "command": "",
           "serviceDomain": "zidoo",
           "key": "Key.Back"
+        },
+        {
+          "icon": "fas fa-volume-up",
+          "text": "Vol +",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "switch.home_theater_avr_vol_up",
+          "service": "switch.toggle"
+        },
+        {
+          "icon": "fas fa-volume-mute",
+          "text": "Mute",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.Mute"
+        },
+        {
+          "icon": "fas fa-volume-down",
+          "text": "Vol -",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "switch.home_theater_avr_vol_down",
+          "service": "switch.toggle"
+        },
+        {
+          "icon": "fas fa-backward",
+          "text": "Backward",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.MediaBackward"
+        },
+        {
+          "icon": "fas fa-play",
+          "text": "Play",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.MediaPlay"
+        },
+        {
+          "icon": "fas fa-forward",
+          "text": "New Button",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.MediaForward"
         }
       ]
     }
