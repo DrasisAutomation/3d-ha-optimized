@@ -291,14 +291,14 @@
           "name": "Spot",
           "icon": "fas fa-lightbulb",
           "entityId": "switch.exproom_lumi_2ch_r4",
-          "active": true,
+          "active": false,
           "controlType": "toggle"
         },
         {
           "name": "CCT LT",
           "icon": "fas fa-sliders-h",
           "entityId": "light.exp_room_light3_light",
-          "active": true,
+          "active": false,
           "controlType": "cct"
         },
         {
@@ -604,6 +604,116 @@
           "command": ""
         }
       ]
+    },
+    {
+      "id": "media-remote-4",
+      "position": [
+        -89.56915944742899,
+        71.14229698619994,
+        -486.3882273644675
+      ],
+      "targetScene": "scene1768371535644",
+      "buttons": [
+        {
+          "icon": "fas fa-home",
+          "text": "Home",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.Home"
+        },
+        {
+          "icon": "fas fa-arrow-up",
+          "text": "Up",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.Up"
+        },
+        {
+          "icon": "fas fa-bars",
+          "text": "Home",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.Menu"
+        },
+        {
+          "icon": "fas fa-arrow-left",
+          "text": "Left",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.Left"
+        },
+        {
+          "icon": "fas fa-circle",
+          "text": "OK",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.Select"
+        },
+        {
+          "icon": "fas fa-arrow-right",
+          "text": "Right",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.Right"
+        },
+        {
+          "icon": "fas fa-camera",
+          "text": "File",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.file"
+        },
+        {
+          "icon": "fas fa-arrow-down",
+          "text": "Down",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.Down"
+        },
+        {
+          "icon": "fas fa-undo",
+          "text": "Menu",
+          "entityType": "media_player",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "media_player.z9x_pro",
+          "service": "send_key",
+          "serviceDomain": "zidoo",
+          "key": "Key.Back"
+        }
+      ]
     }
   ],
   "lockRemotes": [
@@ -654,7 +764,7 @@
       ]
     }
   ],
-  "currentScene": "scene1",
+  "currentScene": "scene1768371535644",
   "haConfig": {
     "url": "https://demo.lumihomepro1.com",
     "connected": true,

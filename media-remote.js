@@ -36,17 +36,17 @@ const MediaRemoteModule = (() => {
     { class: 'fas fa-music', name: 'Music' }
   ];
 
-  // Default buttons for media remote
+  // Default buttons for media remote - FIXED: Using separate serviceDomain and service fields
   const DEFAULT_BUTTONS = [
-    { icon: 'fas fa-power-off', text: 'Power', entityType: 'remote', entityId: 'remote.tv', service: 'remote.turn_on', command: '', textColor: '#000000', bgColor: '#ffffff' },
-    { icon: 'fas fa-arrow-up', text: 'Up', entityType: 'remote', entityId: 'remote.tv', service: 'remote.send_command', command: 'UP', textColor: '#000000', bgColor: '#ffffff' },
-    { icon: 'fas fa-home', text: 'Home', entityType: 'remote', entityId: 'remote.tv', service: 'remote.send_command', command: 'HOME', textColor: '#000000', bgColor: '#ffffff' },
-    { icon: 'fas fa-arrow-left', text: 'Left', entityType: 'remote', entityId: 'remote.tv', service: 'remote.send_command', command: 'LEFT', textColor: '#000000', bgColor: '#ffffff' },
-    { icon: 'fas fa-circle', text: 'OK', entityType: 'remote', entityId: 'remote.tv', service: 'remote.send_command', command: 'OK', textColor: '#000000', bgColor: '#ffffff' },
-    { icon: 'fas fa-arrow-right', text: 'Right', entityType: 'remote', entityId: 'remote.tv', service: 'remote.send_command', command: 'RIGHT', textColor: '#000000', bgColor: '#ffffff' },
-    { icon: 'fas fa-undo', text: 'Back', entityType: 'remote', entityId: 'remote.tv', service: 'remote.send_command', command: 'BACK', textColor: '#000000', bgColor: '#ffffff' },
-    { icon: 'fas fa-arrow-down', text: 'Down', entityType: 'remote', entityId: 'remote.tv', service: 'remote.send_command', command: 'DOWN', textColor: '#000000', bgColor: '#ffffff' },
-    { icon: 'fas fa-bars', text: 'Menu', entityType: 'remote', entityId: 'remote.tv', service: 'remote.send_command', command: 'MENU', textColor: '#000000', bgColor: '#ffffff' }
+    { icon: 'fas fa-power-off', text: 'Power', entityType: 'media_player', entityId: 'media_player.z9x_pro', serviceDomain: 'zidoo', service: 'send_key', key: 'Key.Power', textColor: '#000000', bgColor: '#ffffff' },
+    { icon: 'fas fa-arrow-up', text: 'Up', entityType: 'media_player', entityId: 'media_player.z9x_pro', serviceDomain: 'zidoo', service: 'send_key', key: 'Key.Up', textColor: '#000000', bgColor: '#ffffff' },
+    { icon: 'fas fa-home', text: 'Home', entityType: 'media_player', entityId: 'media_player.z9x_pro', serviceDomain: 'zidoo', service: 'send_key', key: 'Key.Home', textColor: '#000000', bgColor: '#ffffff' },
+    { icon: 'fas fa-arrow-left', text: 'Left', entityType: 'media_player', entityId: 'media_player.z9x_pro', serviceDomain: 'zidoo', service: 'send_key', key: 'Key.Left', textColor: '#000000', bgColor: '#ffffff' },
+    { icon: 'fas fa-circle', text: 'OK', entityType: 'media_player', entityId: 'media_player.z9x_pro', serviceDomain: 'zidoo', service: 'send_key', key: 'Key.Select', textColor: '#000000', bgColor: '#ffffff' },
+    { icon: 'fas fa-arrow-right', text: 'Right', entityType: 'media_player', entityId: 'media_player.z9x_pro', serviceDomain: 'zidoo', service: 'send_key', key: 'Key.Right', textColor: '#000000', bgColor: '#ffffff' },
+    { icon: 'fas fa-undo', text: 'Back', entityType: 'media_player', entityId: 'media_player.z9x_pro', serviceDomain: 'zidoo', service: 'send_key', key: 'Key.Back', textColor: '#000000', bgColor: '#ffffff' },
+    { icon: 'fas fa-arrow-down', text: 'Down', entityType: 'media_player', entityId: 'media_player.z9x_pro', serviceDomain: 'zidoo', service: 'send_key', key: 'Key.Down', textColor: '#000000', bgColor: '#ffffff' },
+    { icon: 'fas fa-bars', text: 'Menu', entityType: 'media_player', entityId: 'media_player.z9x_pro', serviceDomain: 'zidoo', service: 'send_key', key: 'Key.Menu', textColor: '#000000', bgColor: '#ffffff' }
   ];
 
   let instanceId = 1;
@@ -171,41 +171,32 @@ const MediaRemoteModule = (() => {
       return Promise.reject('Not connected');
     }
     
-    const messageId = HA_CONFIG.messageId++;
-    const message = {
-      id: messageId,
-      type: 'call_service',
-      domain: domain, 
-      service: service,
-      service_data: data
-    };
-    
-    console.log('Sending command:', message);
-    HA_CONFIG.socket.send(JSON.stringify(message));
-    
-return new Promise((resolve, reject) => {
-  HA_CONFIG.pendingRequests.set(messageId, { resolve, reject });
+  // Ensure domain doesn't have dots
+  const cleanDomain = domain.split('.')[0];
   
-  // Don't set timeout for switch commands since they don't return results
-  if (domain === 'switch') {
-    // For switches, resolve immediately after sending
+  const messageId = HA_CONFIG.messageId++;
+  const message = {
+    id: messageId,
+    type: 'call_service',
+    domain: cleanDomain, 
+    service: service,
+    service_data: data
+  };
+  
+  console.log('Sending command:', message);
+  HA_CONFIG.socket.send(JSON.stringify(message));
+  
+  return new Promise((resolve, reject) => {
+    HA_CONFIG.pendingRequests.set(messageId, { resolve, reject });
+    
     setTimeout(() => {
       if (HA_CONFIG.pendingRequests.has(messageId)) {
         HA_CONFIG.pendingRequests.delete(messageId);
         resolve({ success: true, message: 'Command sent' });
       }
     }, 500);
-  } else {
-    // Timeout after 5 seconds for other commands
-    setTimeout(() => {
-      if (HA_CONFIG.pendingRequests.has(messageId)) {
-        HA_CONFIG.pendingRequests.delete(messageId);
-        reject(new Error('Command timeout'));
-      }
-    }, 5000);
-  }
-});
-  };
+  });
+};
 
   // Darken color helper function
   const darkenColor = (color, percent) => {
@@ -316,10 +307,11 @@ return new Promise((resolve, reject) => {
                 <select class="media-remote-form-select" id="${remoteId}-entityType">
                   <option value="remote">Remote Control</option>
                   <option value="switch">Switch</option>
+                  <option value="media_player">Media Player (Key Commands)</option>
                 </select>
               </div>
 
-              <div id="${remoteId}-remoteConfig" class="media-remote-form-group">
+              <div id="${remoteId}-remoteConfig" class="media-remote-form-group" style="display: none;">
                 <label class="media-remote-form-label">Remote Entity ID</label>
                 <input type="text" class="media-remote-form-input" id="${remoteId}-remoteEntity" placeholder="remote.living_room_tv">
 
@@ -340,6 +332,45 @@ return new Promise((resolve, reject) => {
               <div id="${remoteId}-switchConfig" class="media-remote-form-group" style="display: none;">
                 <label class="media-remote-form-label">Switch Entity ID</label>
                 <input type="text" class="media-remote-form-input" id="${remoteId}-switchEntity" placeholder="switch.living_room_lamp">
+              </div>
+
+              <div id="${remoteId}-mediaPlayerConfig" class="media-remote-form-group" style="display: none;">
+                <label class="media-remote-form-label">Media Player Entity ID</label>
+                <input type="text" class="media-remote-form-input" id="${remoteId}-mediaPlayerEntity" placeholder="media_player.z9x_pro">
+
+                <label class="media-remote-form-label" style="margin-top: 10px;">Service Domain</label>
+                <input type="text" class="media-remote-form-input" id="${remoteId}-mediaServiceDomain" placeholder="zidoo" value="zidoo">
+
+                <label class="media-remote-form-label" style="margin-top: 10px;">Service Name</label>
+                <input type="text" class="media-remote-form-input" id="${remoteId}-mediaService" placeholder="send_key" value="send_key">
+
+                <label class="media-remote-form-label" style="margin-top: 10px;">Key Command</label>
+                <input type="text" class="media-remote-form-input" id="${remoteId}-mediaKey" placeholder="Key.Home, Key.Up, etc.">
+
+                <div class="media-remote-key-suggestions" style="margin-top: 10px;">
+                  <label class="media-remote-form-label">Common Keys:</label>
+                  <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.Home">Home</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.Up">Up</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.Down">Down</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.Left">Left</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.Right">Right</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.Select">OK</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.Back">Back</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.Menu">Menu</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.VolumeUp">Vol+</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.VolumeDown">Vol-</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.Mute">Mute</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.Power">Power</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.MediaPlay">Play</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.MediaPause">Pause</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.MediaStop">Stop</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.MediaForward">Forward</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.MediaBackward">Backward</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.MediaNext">Next</button>
+                    <button type="button" class="media-remote-key-suggestion" data-key="Key.MediaPrevious">Prev</button>
+                  </div>
+                </div>
               </div>
 
               <div class="media-remote-form-group">
@@ -440,9 +471,14 @@ return new Promise((resolve, reject) => {
     const remoteEntity = document.getElementById(`${remoteId}-remoteEntity`);
     const remoteCommand = document.getElementById(`${remoteId}-remoteCommand`);
     const switchEntity = document.getElementById(`${remoteId}-switchEntity`);
+    const mediaPlayerEntity = document.getElementById(`${remoteId}-mediaPlayerEntity`);
+    const mediaServiceDomain = document.getElementById(`${remoteId}-mediaServiceDomain`);
+    const mediaService = document.getElementById(`${remoteId}-mediaService`);
+    const mediaKey = document.getElementById(`${remoteId}-mediaKey`);
     const commandContainer = document.getElementById(`${remoteId}-commandContainer`);
     const remoteConfig = document.getElementById(`${remoteId}-remoteConfig`);
     const switchConfig = document.getElementById(`${remoteId}-switchConfig`);
+    const mediaPlayerConfig = document.getElementById(`${remoteId}-mediaPlayerConfig`);
     const buttonPreview = document.getElementById(`${remoteId}-buttonPreview`);
     const modalTitle = document.getElementById(`${remoteId}-modalTitle`);
     const modalSubtitle = document.getElementById(`${remoteId}-modalSubtitle`);
@@ -459,7 +495,8 @@ return new Promise((resolve, reject) => {
       cancelDelete, confirmDelete, buttonGrid, iconGrid, emptyState,
       entityType, remoteService, textColor, bgColor, textColorValue, bgColorValue,
       buttonIcon, buttonText, remoteEntity, remoteCommand, switchEntity,
-      commandContainer, remoteConfig, switchConfig, buttonPreview,
+      mediaPlayerEntity, mediaServiceDomain, mediaService, mediaKey,
+      commandContainer, remoteConfig, switchConfig, mediaPlayerConfig, buttonPreview,
       modalTitle, modalSubtitle, remoteData);
   };
 
@@ -617,7 +654,7 @@ return new Promise((resolve, reject) => {
     longPressButton = null;
   };
 
-  // Send command to Home Assistant
+  // Send command to Home Assistant - FIXED VERSION
   const sendToHomeAssistant = (button, remoteId) => {
     if (!HA_CONFIG.connected || !HA_CONFIG.socket) {
       console.warn('Home Assistant not connected');
@@ -625,21 +662,44 @@ return new Promise((resolve, reject) => {
       return;
     }
 
-    let serviceData = {
-      entity_id: button.entityId
-    };
+    let domain, service, serviceData = {};
 
-    if (button.service === 'remote.send_command') {
-      serviceData.command = button.command;
+    if (button.entityType === 'media_player') {
+      // Handle media player key commands (like zidoo.send_key)
+      // Use serviceDomain and service separately (new format)
+      domain = button.serviceDomain || 'zidoo';
+      service = button.service || 'send_key';
+      serviceData = {
+        entity_id: button.entityId,
+        key: button.key
+      };
+      
+      console.log(`Calling ${domain}.${service} with data:`, serviceData);
+    } else if (button.entityType === 'remote') {
+      // Handle remote commands - parse domain.service format
+      const serviceParts = button.service.split('.');
+      if (serviceParts.length === 2) {
+        domain = serviceParts[0];
+        service = serviceParts[1];
+      } else {
+        console.error('Invalid service format:', button.service);
+        alert('Invalid service format');
+        return;
+      }
+      
+      serviceData.entity_id = button.entityId;
+      
+      if (button.service === 'remote.send_command') {
+        serviceData.command = button.command;
+      } else if (button.service === 'remote.turn_on' && button.command) {
+        serviceData.activity = button.command;
+      }
+    } else if (button.entityType === 'switch') {
+      // Handle switch toggle
+      domain = 'switch';
+      service = 'toggle';
+      serviceData.entity_id = button.entityId;
     }
-
-    if (button.service === 'remote.turn_on' && button.command) {
-      serviceData.activity = button.command;
-    }
-
-    const [domain, service] = button.service.split('.');
-    
-    console.log(`Calling ${domain}.${service} with data:`, serviceData);
     
     callService(domain, service, serviceData)
       .then(result => {
@@ -682,6 +742,11 @@ return new Promise((resolve, reject) => {
       }
     } else if (button.entityType === 'switch') {
       document.getElementById(`${remoteId}-switchEntity`).value = button.entityId || '';
+    } else if (button.entityType === 'media_player') {
+      document.getElementById(`${remoteId}-mediaPlayerEntity`).value = button.entityId || '';
+      document.getElementById(`${remoteId}-mediaServiceDomain`).value = button.serviceDomain || 'zidoo';
+      document.getElementById(`${remoteId}-mediaService`).value = button.service || 'send_key';
+      document.getElementById(`${remoteId}-mediaKey`).value = button.key || '';
     }
 
     // Update icon selection
@@ -727,6 +792,10 @@ return new Promise((resolve, reject) => {
     document.getElementById(`${remoteId}-remoteService`).value = '';
     document.getElementById(`${remoteId}-remoteCommand`).value = '';
     document.getElementById(`${remoteId}-switchEntity`).value = '';
+    document.getElementById(`${remoteId}-mediaPlayerEntity`).value = '';
+    document.getElementById(`${remoteId}-mediaServiceDomain`).value = 'zidoo';
+    document.getElementById(`${remoteId}-mediaService`).value = 'send_key';
+    document.getElementById(`${remoteId}-mediaKey`).value = '';
     document.getElementById(`${remoteId}-commandContainer`).style.display = 'none';
 
     // Hide delete button
@@ -740,7 +809,7 @@ return new Promise((resolve, reject) => {
     updatePreview(remoteId);
   };
 
-  // Save button handler - FIXED
+  // Save button handler
   const handleSaveButton = (remoteId) => {
     const remoteData = remotesData.get(remoteId);
     if (!remoteData) return;
@@ -754,6 +823,8 @@ return new Promise((resolve, reject) => {
     let entityId = '';
     let service = '';
     let command = '';
+    let serviceDomain = '';
+    let key = '';
 
     if (entityType === 'remote') {
       entityId = document.getElementById(`${remoteId}-remoteEntity`).value.trim();
@@ -764,6 +835,11 @@ return new Promise((resolve, reject) => {
     } else if (entityType === 'switch') {
       entityId = document.getElementById(`${remoteId}-switchEntity`).value.trim();
       service = 'switch.toggle';
+    } else if (entityType === 'media_player') {
+      entityId = document.getElementById(`${remoteId}-mediaPlayerEntity`).value.trim();
+      serviceDomain = document.getElementById(`${remoteId}-mediaServiceDomain`).value.trim();
+      service = document.getElementById(`${remoteId}-mediaService`).value.trim();
+      key = document.getElementById(`${remoteId}-mediaKey`).value.trim();
     }
 
     // Validation
@@ -787,6 +863,11 @@ return new Promise((resolve, reject) => {
       return;
     }
 
+    if (entityType === 'media_player' && (!entityId || !serviceDomain || !service || !key)) {
+      alert('Please fill all media player fields');
+      return;
+    }
+
     const buttonData = {
       icon: icon || 'fas fa-tv',
       text,
@@ -794,8 +875,9 @@ return new Promise((resolve, reject) => {
       textColor,
       bgColor,
       entityId,
-      service,
-      command
+      ...(entityType === 'remote' && { service, command }),
+      ...(entityType === 'switch' && { service }),
+      ...(entityType === 'media_player' && { serviceDomain, service, key })
     };
 
     if (remoteData.currentButtonIndex !== null) {
@@ -835,14 +917,18 @@ return new Promise((resolve, reject) => {
     const entityType = document.getElementById(`${remoteId}-entityType`).value;
     const remoteConfig = document.getElementById(`${remoteId}-remoteConfig`);
     const switchConfig = document.getElementById(`${remoteId}-switchConfig`);
+    const mediaPlayerConfig = document.getElementById(`${remoteId}-mediaPlayerConfig`);
 
     if (remoteConfig) remoteConfig.style.display = 'none';
     if (switchConfig) switchConfig.style.display = 'none';
+    if (mediaPlayerConfig) mediaPlayerConfig.style.display = 'none';
 
     if (entityType === 'remote') {
       if (remoteConfig) remoteConfig.style.display = 'block';
     } else if (entityType === 'switch') {
       if (switchConfig) switchConfig.style.display = 'block';
+    } else if (entityType === 'media_player') {
+      if (mediaPlayerConfig) mediaPlayerConfig.style.display = 'block';
     }
   };
 
@@ -899,7 +985,8 @@ return new Promise((resolve, reject) => {
                                cancelDelete, confirmDelete, buttonGrid, iconGrid, emptyState,
                                entityType, remoteService, textColor, bgColor, textColorValue, bgColorValue,
                                buttonIcon, buttonText, remoteEntity, remoteCommand, switchEntity,
-                               commandContainer, remoteConfig, switchConfig, buttonPreview,
+                               mediaPlayerEntity, mediaServiceDomain, mediaService, mediaKey,
+                               commandContainer, remoteConfig, switchConfig, mediaPlayerConfig, buttonPreview,
                                modalTitle, modalSubtitle, remoteData) => {
 
     // Open modal
@@ -974,7 +1061,7 @@ return new Promise((resolve, reject) => {
       exitEditMode(remoteId);
     });
 
-    // Save button - FIXED
+    // Save button
     saveButton.addEventListener('click', (e) => {
       e.stopPropagation();
       handleSaveButton(remoteId);
@@ -1065,6 +1152,19 @@ return new Promise((resolve, reject) => {
       });
     }
 
+    // Add key suggestion buttons
+    const keySuggestions = document.querySelectorAll(`#${remoteId}-mediaPlayerConfig .media-remote-key-suggestion`);
+    keySuggestions.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const key = btn.dataset.key;
+        if (mediaKey) {
+          mediaKey.value = key;
+        }
+      });
+    });
+
     // Close modal when clicking outside
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
@@ -1081,7 +1181,8 @@ return new Promise((resolve, reject) => {
 
     // Prevent propagation for form elements
     const formElements = [buttonIcon, buttonText, entityType, remoteEntity, remoteService, 
-                          remoteCommand, switchEntity, textColor, bgColor];
+                          remoteCommand, switchEntity, mediaPlayerEntity, mediaServiceDomain,
+                          mediaService, mediaKey, textColor, bgColor];
     
     formElements.forEach(input => {
       if (input) {
@@ -1092,7 +1193,7 @@ return new Promise((resolve, reject) => {
     });
 
     // Fix input field click issues
-    [buttonIcon, buttonText, remoteEntity, remoteCommand, switchEntity].forEach(input => {
+    [buttonIcon, buttonText, remoteEntity, remoteCommand, switchEntity, mediaPlayerEntity, mediaServiceDomain, mediaService, mediaKey].forEach(input => {
       if (input) {
         input.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -1168,7 +1269,11 @@ return new Promise((resolve, reject) => {
             bgColor: btn.bgColor,
             entityId: btn.entityId,
             service: btn.service,
-            command: btn.command
+            command: btn.command,
+            ...(btn.entityType === 'media_player' && { 
+              serviceDomain: btn.serviceDomain,
+              key: btn.key 
+            })
           }))
         });
       });
@@ -1207,7 +1312,11 @@ return new Promise((resolve, reject) => {
             bgColor: btn.bgColor || '#ffffff',
             entityId: btn.entityId || '',
             service: btn.service || '',
-            command: btn.command || ''
+            command: btn.command || '',
+            ...(btn.entityType === 'media_player' && { 
+              serviceDomain: btn.serviceDomain || 'zidoo',
+              key: btn.key || ''
+            })
           }));
         } else {
           // Use defaults if no buttons provided
@@ -1718,6 +1827,23 @@ style.textContent = `
     background: #007aff;
     color: white;
     border-color: #0056cc;
+  }
+
+  /* Key suggestion buttons */
+  .media-remote-key-suggestion {
+    padding: 6px 12px;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .media-remote-key-suggestion:active {
+    background: #007aff;
+    color: white;
+    transform: scale(0.95);
   }
 
   /* Delete confirmation */
