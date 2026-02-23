@@ -534,7 +534,7 @@
         },
         {
           "icon": "fas fa-volume-down",
-          "text": "New Button",
+          "text": "Vol -",
           "entityType": "remote",
           "textColor": "#000000",
           "bgColor": "#ffffff",
