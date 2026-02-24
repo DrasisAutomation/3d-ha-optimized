@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>DIGINESS — with View More + Add to Cart on hover</title>
+<meta name="description" content="Premium smart gadgets with dual hover buttons.">
+<!-- Font Awesome 6 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+/* ===== base styles ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--fg:#000;--primary:#000;--primary-fg:#fff;
+  --muted:#8a8a8a;--border:rgba(0,0,0,.1);--header-h:60px;
+  --ease:cubic-bezier(.65,0,.35,1);
+  --glass-bg: rgba(4, 4, 4, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-blur: blur(12px);
+  --glossy-bg: rgba(20, 20, 20, 0.6);
+}
+body{
+  font-family:'Inter',sans-serif;
+  font-weight:300;
+  letter-spacing:.02em;
+  background:var(--bg);
+  color:var(--fg);
+  overflow-x:hidden;
+  min-width:200px;
+}
+a{text-decoration:none;color:inherit}
+ul{list-style:none}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
+input{font:inherit;color:inherit}
+.btn-text{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:400}
+.btn-primary{
+  background:var(--primary);
+  color:var(--primary-fg);
+  padding:14px 24px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:opacity .4s var(--ease);
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  font-weight:400;
+  border:none;
+  width:100%
+}
+.btn-primary:hover{opacity:.8}
+h1,h2,h3,h4{font-weight:400;letter-spacing:.06em;text-transform:uppercase}
+
+/* ===== HEADER (glass by default) ===== */
+.header{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:100;
+  height:var(--header-h);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+  color: #fff;
+}
+.header-inner{
+  position:relative;
+  height:100%;
+  max-width:1440px;
+  margin:0 auto;
+  padding:0 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.header .logo{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%, -50%);
+  margin:0;
+  color: #fff;
+  white-space:nowrap;
+}
+.header .logo svg{width:120px;height:auto;fill: currentColor; color: #fff; display: block; }
+.nav-left,
+.nav-right{
+  display:flex;
+  align-items:center;
+  height:100%;
+  gap: 8px;
+  flex: 1 1 0;
+}
+.nav-right { justify-content: flex-end; }
+.nav-link{
+  padding:0 12px;
+  color:#fff;
+  transition:opacity .3s;
+  white-space: nowrap;
+}
+.nav-link:hover{opacity:.7}
+.mobile-menu-btn{
+  display:none;
+  color:#fff;
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.menu-overlay{
+  position:fixed;
+  inset:0;
+  z-index:200;
+  background:rgba(0,0,0,0.2);
+  backdrop-filter: blur(4px);
+  display:none;
+  opacity:0;
+  transition:opacity .4s var(--ease);
+}
+.menu-overlay.active{display:block;opacity:1}
+.menu-sidebar{
+  position:fixed;
+  top:0;
+  left:-100%;
+  width:100%;
+  max-width:100vw;
+  height:100dvh;
+  z-index:201;
+  background: var(--glossy-bg);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  color: #fff;
+  transition:left .5s var(--ease);
+  display:flex;
+  flex-direction:column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  border-right: 1px solid rgba(255,255,255,0.15);
+}
+.menu-sidebar.active{left:0}
+.menu-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:24px 32px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+.menu-header h3{
+  font-size:14px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:#fff;
+  font-weight:400;
+}
+.menu-close{
+  color:#fff;
+  font-size:12px;
+  padding:10px 20px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+  border-radius:40px;
+  letter-spacing:.1em;
+  border:1px solid rgba(255,255,255,0.15);
+}
+.menu-close:hover{ background:rgba(255,255,255,0.2); }
+.menu-body{
+  flex:1;
+  overflow-y:auto;
+  padding:40px 32px;
+  display:flex;
+  flex-direction:column;
+}
+.menu-item{
+  padding:20px 0;
+  color:rgba(255,255,255,0.9);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  font-size:12px;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  transition:color .2s, padding-left .2s;
+  cursor:pointer;
+  font-weight:300;
+}
+.menu-item:hover{ color:#fff; padding-left:16px; }
+.menu-divider{ border-top:1px solid rgba(255,255,255,0.2); margin:30px 0; }
+.mobile-search-item{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding:20px 0;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  color:rgba(255,255,255,0.9);
+  font-size:12px;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.mobile-search-item:hover{ color:#fff; padding-left:16px; }
+.mobile-search-icon{ font-size: 16px; opacity: 0.7; }
+
+.search-overlay{
+  position:fixed;
+  inset:0;
+  z-index:200;
+  background:rgba(0,0,0,0.75);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  padding-top:20vh;
+  opacity:0;
+  transition:opacity .3s var(--ease);
+}
+.search-overlay.active{ display:flex; opacity:1; }
+.search-close{
+  position:absolute;
+  top:24px;
+  right:28px;
+  color:#fff;
+  font-size:28px;
+  width:52px;
+  height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:rgba(255,255,255,0.1);
+}
+.search-close:hover{ background:rgba(255,255,255,0.2); transform:scale(1.05); }
+.search-input-wrapper{
+  width:90%;
+  max-width:650px;
+  position:relative;
+  margin-bottom:30px;
+}
+.search-input-wrapper input{
+  background:transparent;
+  border:none;
+  border-bottom:2px solid rgba(255,255,255,0.3);
+  color:#fff;
+  font-size:36px;
+  font-weight:300;
+  width:100%;
+  padding:20px 0 12px;
+  outline:none;
+}
+.search-input-wrapper input::placeholder{ color:rgba(255,255,255,0.25); font-size:28px; }
+.search-input-wrapper .search-icon{
+  position:absolute;
+  right:0;
+  bottom:22px;
+  color:rgba(255,255,255,0.5);
+  font-size:28px;
+}
+.search-results{
+  width:90%;
+  max-width:650px;
+  color:#fff;
+  font-size:18px;
+  max-height:350px;
+  overflow-y:auto;
+  padding:12px 0;
+}
+.search-result-item{
+  padding:16px 0;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  cursor:pointer;
+}
+.search-result-item:hover{ padding-left:16px; background:rgba(255,255,255,0.05); }
+.no-results{ padding:30px 0; color:rgba(255,255,255,0.5); text-align:center; }
+
+.bag-overlay{
+  position:fixed;
+  inset:0;
+  z-index:200;
+  background:rgba(0,0,0,0.25);
+  backdrop-filter: blur(6px);
+  display:none;
+  opacity:0;
+  transition:opacity .4s var(--ease)
+}
+.bag-overlay.active{display:block;opacity:1}
+.bag-sidebar{
+  position:fixed;
+  top:0;
+  right:-420px;
+  width:420px;
+  max-width:100vw;
+  height:100dvh;
+  z-index:201;
+  background: var(--glossy-bg);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border-left: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  transition:right .5s var(--ease);
+  display:flex;
+  flex-direction:column;
+  box-shadow: -4px 0 40px rgba(0,0,0,0.6);
+}
+.bag-sidebar.active{right:0}
+.bag-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:20px 24px;
+  border-bottom:1px solid rgba(255,255,255,0.15);
+}
+.bag-header h3{font-size:13px;letter-spacing:.12em;text-transform:uppercase;}
+.bag-close{
+  color:#fff;
+  font-size:12px;
+  padding:8px 16px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+  border-radius:30px;
+  border:1px solid rgba(255,255,255,0.15);
+}
+.bag-body{ flex:1; overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:20px; }
+.bag-empty{ text-align:center; color:rgba(255,255,255,0.8); font-size:13px; margin: auto; }
+.bag-footer{ padding:20px 24px; border-top:1px solid rgba(255,255,255,0.15); }
+.bag-item{
+  display:flex;
+  gap:16px;
+  padding:16px 0;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  width:100%;
+  color:#fff;
+}
+.bag-item img{
+  width:80px;
+  height:100px;
+  object-fit:cover;
+  border-radius:4px;
+  flex-shrink:0;
+}
+.bag-item-info{ flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; }
+.bag-item-title{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; font-weight:400; }
+.bag-item-price{ font-size:11px; color:rgba(255,255,255,0.8); }
+.bag-quantity{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:6px;
+}
+.bag-qty-btn{
+  background:rgba(255,255,255,0.1);
+  border:1px solid rgba(255,255,255,0.25);
+  color:#fff;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+}
+.bag-qty-btn:hover{ background:rgba(255,255,255,0.3); border-color:#fff; }
+.bag-qty-num{ font-size:12px; min-width:18px; text-align:center; }
+.bag-item-remove{ font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,0.6); cursor:pointer; margin-top:6px; }
+.bag-item-remove:hover{ color:#fff; }
+.bag-count{
+  background:#fff;
+  color:#000;
+  font-size:9px;
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-left:4px;
+}
+
+/* ===== product page layout ===== */
+.product-page {
+  max-width: 1440px;
+  margin: calc(var(--header-h) + 24px) auto 0;
+  padding: 0 16px 60px;
+  display: flex;
+  gap: 40px;
+  width: 100%;
+}
+
+/* filter sidebar — left side (desktop only) */
+.filter-sidebar {
+  flex: 0 0 240px;
+  background: #f9f9f9;
+  padding: 24px 20px;
+  border-radius: 4px;
+  align-self: start;
+  position: sticky;
+  top: calc(var(--header-h) + 20px);
+  border: 1px solid var(--border);
+}
+.filter-sidebar h3 {
+  font-size: 13px;
+  letter-spacing: .15em;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ddd;
+  font-weight: 500;
+}
+.filter-group {
+  margin-bottom: 32px;
+}
+.filter-group h4 {
+  font-size: 11px;
+  letter-spacing: .1em;
+  margin-bottom: 16px;
+  color: #555;
+  font-weight: 400;
+}
+.filter-group ul li {
+  margin-bottom: 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.filter-group ul li input[type="checkbox"] {
+  accent-color: #000;
+  width: 14px;
+  height: 14px;
+}
+.price-range {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.price-range input[type="range"] {
+  width: 100%;
+  accent-color: #000;
+}
+.range-values {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #666;
+}
+.sort-radio {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sort-radio label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sort-radio input[type="radio"] {
+  accent-color: #000;
+}
+.clear-filters {
+  background: none;
+  border: 1px solid #ccc;
+  padding: 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  width: 100%;
+  margin-top: 16px;
+}
+.clear-filters:hover { background: #eee; }
+
+/* products grid */
+.products-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+.products-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.products-header h3 { font-size: 20px; font-weight: 300; letter-spacing: .2em; }
+.products-header span { font-size: 12px; color: #666; }
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* ===== PRODUCT CARD with DUAL BUTTONS (view more + add to cart) ===== */
+.product-card {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  background: #fff;
+  width: 100%;
+}
+.product-card img {
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  background: #f0f0f0;
+}
+.product-info {
+  padding: 12px 16px;
+  background: #fff;
+  transition: transform .7s var(--ease);
+}
+.product-info h4 {
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-weight: 400;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+.product-info span { font-size: 11px; color: #444; }
+
+/* hover action container for two buttons */
+.product-hover-actions {
+  position: absolute;
+  bottom: -56px;          /* hidden below card */
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px 12px;
+  background: #fff;
+  transition: transform .7s var(--ease);
+  transform: translateY(0);
+  z-index: 10;
+  justify-content: center;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+}
+.product-card:hover .product-info {
+  transform: translateY(-56px);   /* slide info up */
+}
+.product-card:hover .product-hover-actions {
+  transform: translateY(-56px);   /* slide buttons up */
+}
+
+/* dual buttons styling */
+.btn-hover {
+  flex: 1;
+  padding: 10px 0;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  border: 1px solid #000;
+  background: white;
+  color: black;
+  transition: all .2s;
+  text-align: center;
+  border-radius: 0;
+  font-weight: 400;
+  min-width: 0;
+  white-space: nowrap;
+}
+.btn-hover.add-to-bag {
+  background: #000;
+  color: #fff;
+  border: 1px solid #000;
+}
+.btn-hover.add-to-bag:hover { opacity: 0.8; background: #222; }
+.btn-hover.view-more:hover { background: #f2f2f2; }
+
+/* mobile quick-add (visible only on small screens) */
+.product-mobile-add {
+  display: none;
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 18px;
+  border: none;
+  z-index: 5;
+}
+
+/* ===== MOBILE FILTER DROPDOWN ===== */
+.mobile-filter-bar {
+  display: none;
+  justify-content: flex-end;
+  padding: 16px 16px 8px;
+  background: transparent;
+  width: 100%;
+  margin-top: 80px;
+}
+.mobile-filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f5f5f5;
+  padding: 10px 20px;
+  border-radius: 40px;
+  font-size: 12px;
+  text-transform: uppercase;
+  border: 1px solid #ddd;
+  white-space: nowrap;
+}
+.active-filter-count {
+  background: #000;
+  color: #fff;
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 10px;
+  margin-left: 6px;
+}
+.mobile-filter-dropdown {
+  display: none;
+  background: #fff;
+  padding: 20px 16px;
+  margin: 8px 16px 16px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  width: calc(100% - 32px);
+}
+.mobile-filter-dropdown.open { display: block; }
+.dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 14px;
+  letter-spacing: .15em;
+}
+.close-dropdown { font-size: 18px; background: none; border: none; cursor: pointer; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1023px) {
+  .product-page { flex-direction: column; padding-left: 12px; padding-right: 12px; margin-top: 10px !important; }
+  .filter-sidebar { display: none; }
+  .mobile-filter-bar { display: flex; }
+  .products-grid { grid-template-columns: repeat(2,1fr); }
+  .nav-left .nav-link:not(.mobile-menu-btn), .nav-right .desktop-only { display: none; }
+  .mobile-menu-btn { display: block; }
+}
+@media (max-width: 767px) {
+  .product-page { padding-left: 8px; padding-right: 8px; margin-top: 10px !important; }
+  .products-grid { grid-template-columns: 1fr; }
+  .product-mobile-add { display: flex; }
+  /* disable hover shift on small screens */
+  .product-card:hover .product-info { transform: none; }
+  .product-card:hover .product-hover-actions { transform: none; }
+  .product-hover-actions { display: none; } /* hide dual buttons, use mobile add */
+}
+@media (max-width: 480px) {
+  .product-page { padding-left: 8px; padding-right: 8px; margin-top: 10px !important; }
+  .mobile-filter-bar { padding-left: 8px; padding-right: 8px; }
+  .mobile-filter-dropdown { margin-left: 8px; margin-right: 8px; width: calc(100% - 16px); }
+  .products-header h3 { font-size: 18px; }
+}
+@media (max-width: 320px) {
+  .product-page { padding-left: 4px; padding-right: 4px; margin-top: 10px !important; }
+  .mobile-filter-bar { padding-left: 4px; padding-right: 4px; }
+  .mobile-filter-dropdown { margin-left: 4px; margin-right: 4px; width: calc(100% - 8px); padding: 16px 12px; }
+  .products-grid { gap: 8px; }
+  .product-info { padding: 8px; }
+  .product-info h4 { font-size: 10px; }
+  .product-info span { font-size: 10px; }
+}
+
+/* footer */
+.footer{
+  background:var(--primary);
+  color:var(--primary-fg);
+  padding:48px 16px 32px;
+  width: 100%;
+}
+.footer-inner{
+  max-width:1440px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr;
+  gap:32px;
+}
+.footer h3{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; margin-bottom:16px; }
+.footer p{ font-size:12px; color:rgba(255,255,255,.6); line-height:1.6; max-width:400px; }
+.footer ul{ display:flex; flex-direction:column; gap:12px; }
+.footer ul a{ font-size:12px; color:rgba(255,255,255,.6); transition:color .3s; }
+.footer ul a:hover{ color:#fff; }
+.footer-input{
+  display:flex;
+  border-bottom:1px solid rgba(255,255,255,.4);
+  max-width:350px;
+  margin-top:16px;
+}
+.footer-input input{
+  background:transparent;
+  border:none;
+  color:#fff;
+  padding:12px 0;
+  flex:1;
+  outline:none;
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.footer-input input::placeholder{ color:rgba(255,255,255,.4); }
+.footer-input button{ color:#fff; padding:0 8px; font-size:16px; }
+.footer-bottom{
+  max-width:1440px;
+  margin:48px auto 0;
+  padding-top:24px;
+  border-top:1px solid rgba(255,255,255,.2);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.footer-bottom a,.footer-bottom span{ font-size:12px; color:rgba(255,255,255,.4); }
+.footer-bottom a:hover{ color:#fff; }
+.footer-socials{ display:flex; gap:24px; }
+@media(max-width:767px){
+  .footer-inner{ grid-template-columns:1fr; }
+  .footer-bottom{ flex-direction:column; gap:16px; }
+}
+</style>
+</head>
+<body>
+<!-- HEADER -->
+<header class="header" id="mainHeader">
+  <div class="header-inner">
+    <nav class="nav-left"><a href="#shop" class="nav-link btn-text">Shop All</a><button class="mobile-menu-btn btn-text" onclick="openMenu()">Menu</button></nav>
+    <div style="position: absolute; left: 50%; top: 50%; transform: translate(-43%, -50%);">
+      <a href="/" class="logo" style="position: static; transform: none; margin: 0;"><svg viewBox="0 0 200 28" width="120"><text x="0" y="22" font-family="Inter" font-weight="400" font-size="26" letter-spacing="8" fill="currentColor">DIGINESS</text></svg></a>
+    </div>
+    <nav class="nav-right">
+      <button class="nav-link btn-text desktop-only" onclick="openSearch()">Search</button>
+      <a href="#about" class="nav-link btn-text desktop-only">About</a>
+      <a href="#account" class="nav-link btn-text desktop-only">Account</a>
+      <button class="nav-link btn-text bag" onclick="openBag()">Bag <span class="bag-count" id="bagCount">0</span></button>
+    </nav>
+  </div>
+</header>
+
+<!-- MENU, SEARCH, BAG overlays -->
+<div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+<div class="menu-sidebar" id="menuSidebar">
+  <div class="menu-header"><h3>DIGINESS</h3><button class="menu-close btn-text" onclick="closeMenu()">Close</button></div>
+  <div class="menu-body">
+    <div class="mobile-search-item" onclick="openSearch(); closeMenu();"><span>Search</span><span class="mobile-search-icon">⌕</span></div>
+    <a href="#shop" class="menu-item" onclick="closeMenu()">Shop All</a>
+    <a href="#" class="menu-item" onclick="closeMenu()">Smart Watch Pro</a>
+    <a href="#" class="menu-item" onclick="closeMenu()">Wireless Earbuds X1</a>
+    <a href="#" class="menu-item" onclick="closeMenu()">Mini Drone Cam</a>
+    <div class="menu-divider"></div>
+    <a href="#about" class="menu-item" onclick="closeMenu()">About</a>
+    <a href="#account" class="menu-item" onclick="closeMenu()">Account</a>
+    <a href="#" class="menu-item" onclick="closeMenu()">Shipping & Returns</a>
+  </div>
+</div>
+
+<div class="search-overlay" id="searchOverlay">
+  <button class="search-close" onclick="closeSearch()">✕</button>
+  <div class="search-input-wrapper"><input type="text" placeholder="Search smart gadgets..." id="searchInput" oninput="handleSearch()"><span class="search-icon">⌕</span></div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
+<div class="bag-overlay" id="bagOverlay" onclick="closeBag()"></div>
+<div class="bag-sidebar" id="bagSidebar">
+  <div class="bag-header"><h3>Your Bag</h3><button class="bag-close btn-text" onclick="closeBag()">Close</button></div>
+  <div class="bag-body" id="bagBody"><div class="bag-empty">Your bag is empty</div></div>
+  <div class="bag-footer"><button class="btn-primary" style="background:#fff; color:#000;" onclick="alert('Checkout coming soon!')">Checkout</button></div>
+</div>
+
+<!-- Mobile filter bar (visible only on mobile) -->
+<div class="mobile-filter-bar">
+  <button class="mobile-filter-toggle" onclick="toggleMobileFilter()">
+    <i class="fa-solid fa-sliders"></i> Filter
+    <span class="active-filter-count" id="mobileFilterCount">0</span>
+  </button>
+</div>
+
+<!-- Mobile filter dropdown -->
+<div class="mobile-filter-dropdown" id="mobileFilterDropdown">
+  <div class="dropdown-header">
+    <span>FILTER & SORT</span>
+    <button class="close-dropdown" onclick="closeMobileFilter()">✕</button>
+  </div>
+  
+  <div class="filter-group">
+    <h4>CATEGORY</h4>
+    <ul id="mobileCategoryFilters">
+      <li><input type="checkbox" value="Watch" onchange="applyMobileFilters()"> <span>Smart Watches</span></li>
+      <li><input type="checkbox" value="Audio" onchange="applyMobileFilters()"> <span>Audio</span></li>
+      <li><input type="checkbox" value="Camera" onchange="applyMobileFilters()"> <span>Cameras & Drones</span></li>
+      <li><input type="checkbox" value="VR" onchange="applyMobileFilters()"> <span>VR / AR</span></li>
+      <li><input type="checkbox" value="Accessory" onchange="applyMobileFilters()"> <span>Accessories</span></li>
+    </ul>
+  </div>
+
+  <div class="filter-group">
+    <h4>PRICE RANGE (₹)</h4>
+    <div class="price-range">
+      <input type="range" id="mobileMinPrice" min="0" max="40000" step="500" value="0" oninput="updateMobileRange()" onchange="applyMobileFilters()">
+      <input type="range" id="mobileMaxPrice" min="0" max="40000" step="500" value="40000" oninput="updateMobileRange()" onchange="applyMobileFilters()">
+      <div class="range-values">
+        <span id="mobileMinVal">₹0</span>
+        <span id="mobileMaxVal">₹40,000+</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-group">
+    <h4>SORT BY</h4>
+    <div class="sort-radio">
+      <label><input type="radio" name="mobileSort" value="default" checked onchange="applyMobileFilters()"> Default</label>
+      <label><input type="radio" name="mobileSort" value="lowToHigh" onchange="applyMobileFilters()"> Low to High</label>
+      <label><input type="radio" name="mobileSort" value="highToLow" onchange="applyMobileFilters()"> High to Low</label>
+    </div>
+  </div>
+
+  <button class="clear-filters" onclick="clearMobileFilters()">Clear all</button>
+</div>
+
+<!-- MAIN PRODUCT PAGE -->
+<div class="product-page">
+  <!-- LEFT FILTER SIDEBAR (desktop only) -->
+  <aside class="filter-sidebar">
+    <h3>FILTER & SORT</h3>
+    <div class="filter-group">
+      <h4>CATEGORY</h4>
+      <ul id="categoryFilters">
+        <li><input type="checkbox" value="Watch" onchange="applyFilters()"> <span>Smart Watches</span></li>
+        <li><input type="checkbox" value="Audio" onchange="applyFilters()"> <span>Audio</span></li>
+        <li><input type="checkbox" value="Camera" onchange="applyFilters()"> <span>Cameras & Drones</span></li>
+        <li><input type="checkbox" value="VR" onchange="applyFilters()"> <span>VR / AR</span></li>
+        <li><input type="checkbox" value="Accessory" onchange="applyFilters()"> <span>Accessories</span></li>
+      </ul>
+    </div>
+    <div class="filter-group">
+      <h4>PRICE RANGE (₹)</h4>
+      <div class="price-range">
+        <input type="range" id="minPrice" min="0" max="40000" step="500" value="0" oninput="updateRange()" onchange="applyFilters()">
+        <input type="range" id="maxPrice" min="0" max="40000" step="500" value="40000" oninput="updateRange()" onchange="applyFilters()">
+        <div class="range-values">
+          <span id="minVal">₹0</span>
+          <span id="maxVal">₹40,000+</span>
+        </div>
+      </div>
+    </div>
+    <div class="filter-group">
+      <h4>SORT BY</h4>
+      <div class="sort-radio">
+        <label><input type="radio" name="sort" value="default" checked onchange="applyFilters()"> Default</label>
+        <label><input type="radio" name="sort" value="lowToHigh" onchange="applyFilters()"> Low to High</label>
+        <label><input type="radio" name="sort" value="highToLow" onchange="applyFilters()"> High to Low</label>
+      </div>
+    </div>
+    <button class="clear-filters" onclick="clearFilters()">Clear all</button>
+  </aside>
+
+  <!-- RIGHT PRODUCT GRID -->
+  <div class="products-wrapper">
+    <div class="products-header">
+      <h3>All Gadgets</h3>
+      <span id="productCount">15 items</span>
+    </div>
+    <div class="products-grid" id="productGrid"></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer" id="about">
+  <div class="footer-inner">
+    <div><h3>Stay Connected</h3><p>Sign up for exclusive access to new gadgets, special offers, and stories from the world of Diginess.</p><div class="footer-input"><input type="email" placeholder="Email address"><button>→</button></div></div>
+    <div><h3>Shop</h3><ul><li><a href="#">Smart Watch Pro</a></li><li><a href="#">Wireless Earbuds X1</a></li><li><a href="#">Mini Drone Cam</a></li><li><a href="#shop">Shop All</a></li></ul></div>
+    <div><h3>Info</h3><ul><li><a href="#">Our Approach</a></li><li><a href="#">Contact</a></li><li><a href="#">Shipping & Returns</a></li><li><a href="#">Privacy Policy</a></li><li><a href="#">Terms of Service</a></li></ul></div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-socials"><a href="#">Instagram</a><a href="#">TikTok</a><a href="#">YouTube</a></div>
+    <span>© 2026 Diginess. All rights reserved.</span>
+  </div>
+</footer>
+
+<script>
+// ========== HEADER/BAG/SEARCH/MENU ==========
+function openMenu() { document.getElementById('menuOverlay').classList.add('active'); document.getElementById('menuSidebar').classList.add('active'); }
+function closeMenu() { document.getElementById('menuOverlay').classList.remove('active'); document.getElementById('menuSidebar').classList.remove('active'); }
+const allProductNames = ['Smart Watch Pro','Wireless Earbuds X1','Mini Drone Cam','Smart Speaker','Fitness Tracker','VR Headset','Power Bank','Action Camera','Smart Glasses','GPS Tracker','Smart Ring','Headphones','Digital Notebook','Drone 4K','Smart Doorbell'];
+function openSearch() { document.getElementById('searchOverlay').classList.add('active'); setTimeout(() => document.getElementById('searchInput').focus(), 100); }
+function closeSearch() { document.getElementById('searchOverlay').classList.remove('active'); document.getElementById('searchInput').value = ''; document.getElementById('searchResults').innerHTML = ''; }
+function handleSearch() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const res = document.getElementById('searchResults');
+  if (!q) { res.innerHTML = ''; return; }
+  const matches = allProductNames.filter(p => p.toLowerCase().includes(q));
+  if (matches.length) res.innerHTML = matches.map(m => `<div class="search-result-item" onclick="selectSearchItem('${m}')">${m}</div>`).join('');
+  else res.innerHTML = '<div class="no-results">No products found</div>';
+}
+function selectSearchItem(item) { alert(`You selected: ${item}`); closeSearch(); }
+
+// bag
+let bag = [];
+function updateBagUI() {
+  document.getElementById('bagCount').textContent = bag.reduce((sum,i)=>sum+i.quantity,0);
+  const body = document.getElementById('bagBody');
+  if (!bag.length) { body.innerHTML = '<div class="bag-empty">Your bag is empty</div>'; return; }
+  body.innerHTML = '';
+  bag.forEach((item, idx) => {
+    const div = document.createElement('div'); div.className = 'bag-item';
+    div.innerHTML = `<img src="${item.img}"><div class="bag-item-info"><span class="bag-item-title">${item.name}</span><span class="bag-item-price">${item.price}</span>
+      <div class="bag-quantity"><button class="bag-qty-btn" onclick="changeQty(${idx}, -1)">−</button><span class="bag-qty-num">${item.quantity}</span><button class="bag-qty-btn" onclick="changeQty(${idx}, 1)">+</button></div>
+      <span class="bag-item-remove" onclick="removeFromBag(${idx})">Remove</span></div>`;
+    body.appendChild(div);
+  });
+}
+function changeQty(i,d){ let q=bag[i].quantity+d; if(q<1) removeFromBag(i); else {bag[i].quantity=q; updateBagUI();} }
+function removeFromBag(i){ bag.splice(i,1); updateBagUI(); }
+function addToBag(name,price,img){
+  let ex=bag.find(i=>i.name===name);
+  if(ex) ex.quantity+=1; else bag.push({name,price,img,quantity:1});
+  updateBagUI();
+}
+function openBag() { document.getElementById('bagOverlay').classList.add('active'); document.getElementById('bagSidebar').classList.add('active'); }
+function closeBag() { document.getElementById('bagOverlay').classList.remove('active'); document.getElementById('bagSidebar').classList.remove('active'); }
+updateBagUI();
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSearch(); closeBag(); closeMenu(); } });
+
+// ========== PRODUCT DATA ==========
+const productData = [
+  { name: 'Smart Watch Pro', priceNum: 16999, price: '₹16,999', img: 'https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?w=600&h=800&fit=crop', category: 'Watch' },
+  { name: 'Wireless Earbuds X1', priceNum: 9999, price: '₹9,999', img: 'https://images.pexels.com/photos/3780681/pexels-photo-3780681.jpeg?w=600&h=800&fit=crop', category: 'Audio' },
+  { name: 'Mini Drone Cam', priceNum: 21499, price: '₹21,499', img: 'https://tse2.mm.bing.net/th/id/OIP.epF6Hxs9i497obQQBjvqBAHaHa?rs=1&pid=ImgDetMain&o=7&rm=3', category: 'Camera' },
+  { name: 'Smart Speaker 360', priceNum: 12499, price: '₹12,499', img: 'https://images.pexels.com/photos/1649771/pexels-photo-1649771.jpeg?w=600&h=800&fit=crop', category: 'Audio' },
+  { name: 'Fitness Tracker Flex', priceNum: 5999, price: '₹5,999', img: 'https://images.pexels.com/photos/267394/pexels-photo-267394.jpeg?w=600&h=800&fit=crop', category: 'Watch' },
+  { name: 'VR Headset Pro', priceNum: 32999, price: '₹32,999', img: 'https://images.pexels.com/photos/414860/pexels-photo-414860.jpeg?w=600&h=800&fit=crop', category: 'VR' },
+  { name: 'Power Bank 20K', priceNum: 3499, price: '₹3,499', img: 'https://images.pexels.com/photos/699122/pexels-photo-699122.jpeg?w=600&h=800&fit=crop', category: 'Accessory' },
+  { name: 'Action Camera 4K', priceNum: 18999, price: '₹18,999', img: 'https://images.pexels.com/photos/51383/photo-camera-subject-photographer-51383.jpeg?w=600&h=800&fit=crop', category: 'Camera' },
+  { name: 'Smart Glasses', priceNum: 27499, price: '₹27,499', img: 'https://images.pexels.com/photos/1462630/pexels-photo-1462630.jpeg?w=600&h=800&fit=crop', category: 'VR' },
+  { name: 'GPS Tracker', priceNum: 6799, price: '₹6,799', img: 'https://images.pexels.com/photos/2582937/pexels-photo-2582937.jpeg?w=600&h=800&fit=crop', category: 'Accessory' },
+  { name: 'Smart Ring', priceNum: 8999, price: '₹8,999', img: 'https://images.pexels.com/photos/267301/pexels-photo-267301.jpeg?w=600&h=800&fit=crop', category: 'Watch' },
+  { name: 'Noise Cancelling HP', priceNum: 14999, price: '₹14,999', img: 'https://images.pexels.com/photos/3394659/pexels-photo-3394659.jpeg?w=600&h=800&fit=crop', category: 'Audio' },
+  { name: 'Digital Notebook', priceNum: 11299, price: '₹11,299', img: 'https://images.pexels.com/photos/4492129/pexels-photo-4492129.jpeg?w=600&h=800&fit=crop', category: 'Accessory' },
+  { name: 'Drone 4K Pro', priceNum: 39999, price: '₹39,999', img: 'https://images.pexels.com/photos/1154510/pexels-photo-1154510.jpeg?w=600&h=800&fit=crop', category: 'Camera' },
+  { name: 'Smart Doorbell', priceNum: 7999, price: '₹7,999', img: 'https://images.pexels.com/photos/2764674/pexels-photo-2764674.jpeg?w=600&h=800&fit=crop', category: 'Accessory' }
+];
+
+// render with two hover buttons: VIEW MORE + ADD TO BAG
+function renderProducts(products) {
+  const grid = document.getElementById('productGrid');
+  grid.innerHTML = '';
+  products.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    // Use template literal with both buttons – view more (alerts), add to bag
+    card.innerHTML = `<img src="${p.img}" alt="${p.name}" loading="lazy">
+      <button class="product-mobile-add" onclick="addToBag('${p.name}','${p.price}','${p.img}'); event.stopPropagation();">+</button>
+      <div class="product-info"><h4>${p.name}</h4><span>${p.price}</span></div>
+      <div class="product-hover-actions">
+        <button class="btn-hover view-more" onclick="alert('View more: ${p.name}'); event.stopPropagation();">View more</button>
+        <button class="btn-hover add-to-bag" onclick="addToBag('${p.name}','${p.price}','${p.img}'); event.stopPropagation();">Add to bag</button>
+      </div>`;
+    grid.appendChild(card);
+  });
+  document.getElementById('productCount').innerText = products.length + ' items';
+}
+
+// ========== DESKTOP FILTERS ==========
+function applyFilters() {
+  const cats = Array.from(document.querySelectorAll('#categoryFilters input:checked')).map(cb => cb.value);
+  const min = parseInt(document.getElementById('minPrice').value);
+  const max = parseInt(document.getElementById('maxPrice').value);
+  const sort = document.querySelector('input[name="sort"]:checked').value;
+  let filtered = productData.filter(p => (!cats.length || cats.includes(p.category)) && p.priceNum >= min && p.priceNum <= max);
+  if (sort === 'lowToHigh') filtered.sort((a,b) => a.priceNum - b.priceNum);
+  else if (sort === 'highToLow') filtered.sort((a,b) => b.priceNum - a.priceNum);
+  renderProducts(filtered);
+}
+function updateRange() {
+  let min = parseInt(document.getElementById('minPrice').value);
+  let max = parseInt(document.getElementById('maxPrice').value);
+  if (min > max) { [min, max] = [max, min]; }
+  document.getElementById('minVal').innerText = '₹' + min.toLocaleString();
+  document.getElementById('maxVal').innerText = max >= 40000 ? '₹40,000+' : '₹' + max.toLocaleString();
+}
+function clearFilters() {
+  document.querySelectorAll('#categoryFilters input').forEach(cb => cb.checked = false);
+  document.getElementById('minPrice').value = 0;
+  document.getElementById('maxPrice').value = 40000;
+  document.querySelector('input[name="sort"][value="default"]').checked = true;
+  updateRange();
+  applyFilters();
+}
+
+// ========== MOBILE FILTERS ==========
+function toggleMobileFilter() {
+  document.getElementById('mobileFilterDropdown').classList.toggle('open');
+}
+function closeMobileFilter() {
+  document.getElementById('mobileFilterDropdown').classList.remove('open');
+}
+function applyMobileFilters() {
+  const cats = Array.from(document.querySelectorAll('#mobileCategoryFilters input:checked')).map(cb => cb.value);
+  const min = parseInt(document.getElementById('mobileMinPrice').value);
+  const max = parseInt(document.getElementById('mobileMaxPrice').value);
+  const sort = document.querySelector('input[name="mobileSort"]:checked').value;
+  let filtered = productData.filter(p => (!cats.length || cats.includes(p.category)) && p.priceNum >= min && p.priceNum <= max);
+  if (sort === 'lowToHigh') filtered.sort((a,b) => a.priceNum - b.priceNum);
+  else if (sort === 'highToLow') filtered.sort((a,b) => b.priceNum - a.priceNum);
+  renderProducts(filtered);
+  document.getElementById('mobileFilterCount').innerText = cats.length + (min>0||max<40000?1:0);
+}
+function updateMobileRange() {
+  let min = parseInt(document.getElementById('mobileMinPrice').value);
+  let max = parseInt(document.getElementById('mobileMaxPrice').value);
+  if (min > max) { [min, max] = [max, min]; }
+  document.getElementById('mobileMinVal').innerText = '₹' + min;
+  document.getElementById('mobileMaxVal').innerText = max >= 40000 ? '₹40,000+' : '₹' + max;
+}
+function clearMobileFilters() {
+  document.querySelectorAll('#mobileCategoryFilters input').forEach(cb => cb.checked = false);
+  document.getElementById('mobileMinPrice').value = 0;
+  document.getElementById('mobileMaxPrice').value = 40000;
+  document.querySelector('input[name="mobileSort"][value="default"]').checked = true;
+  updateMobileRange();
+  applyMobileFilters();
+  closeMobileFilter();
+}
+
+// initial render
+renderProducts(productData);
+updateRange();
+updateMobileRange();
+</script>
+</body>
+</html>

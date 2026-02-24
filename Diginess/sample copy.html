@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIGINESS — Smart Gadgets</title>
+<meta name="description" content="DIGINESS — Premium smart gadgets for the modern lifestyle.">
+<!-- Font Awesome 6 (free) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--fg:#000;--primary:#000;--primary-fg:#fff;
+  --muted:#8a8a8a;--border:rgba(0,0,0,.1);--header-h:60px;
+  --ease:cubic-bezier(.65,0,.35,1);
+  --glass-bg: rgba(4, 4, 4, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-blur: blur(12px);
+  --glossy-bg: rgba(20, 20, 20, 0.6);
+  --glossy-highlight: rgba(255,255,255,0.1);
+}
+body{
+  font-family:'Inter',sans-serif;
+  font-weight:300;
+  letter-spacing:.02em;
+  -webkit-font-smoothing:antialiased;
+  background:var(--bg);
+  color:var(--fg);
+  overflow-x:hidden
+}
+a{text-decoration:none;color:inherit}
+ul{list-style:none}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
+input{font:inherit;color:inherit}
+.btn-text{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:400;line-height:1.4}
+.btn-primary{
+  background:var(--primary);
+  color:var(--primary-fg);
+  padding:14px 24px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:opacity .4s var(--ease);
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  font-weight:400;
+  border:none;
+  width:100%
+}
+.btn-primary:hover{opacity:.8}
+h1,h2,h3,h4,h5,h6{font-weight:400;letter-spacing:.06em;text-transform:uppercase}
+
+/* ===== HEADER ===== */
+.header{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:100;
+  height:var(--header-h);
+  background: transparent;
+  color: #fff;
+  transition: background 0.3s ease, backdrop-filter 0.3s ease, border-color 0.3s ease;
+}
+.header.glass{
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+}
+.header-inner{
+  position:relative;
+  height:100%;
+  max-width:1440px;
+  margin:0 auto;
+  padding:0 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.header .logo{
+  /* absolute positioning removed — now part of flex flow for perfect centering */
+  position: static;
+  transform: none;
+  margin: 0 auto;
+  color: #fff;
+}
+
+.header-inner{
+  position:relative;
+  height:100%;
+  max-width:1440px;
+  margin:0 auto;
+  padding:0 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.header .logo{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%, -50%);
+  margin:0;
+  color: #fff;
+  white-space:nowrap;
+}
+
+.header .logo svg{width:120px;height:auto;fill: currentColor; color: #fff; display: block; }
+.nav-left,
+.nav-right{
+  display:flex;
+  align-items:center;
+  height:100%;
+  gap: 8px;
+  /* force both sides to be equal width, pushing logo to exact center */
+  flex: 1 1 0;
+}
+.nav-right {
+  justify-content: flex-end;
+}
+.nav-link{
+  padding:0 12px;
+  color:#fff;
+  transition:opacity .3s;
+  white-space: nowrap;
+}
+.nav-link:hover{opacity:.7}
+.mobile-menu-btn{
+  display:none;
+  color:#fff;
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+/* ===== FULL WIDTH LEFT MENU — glossier & minimal ===== */
+.menu-overlay{
+  position:fixed;
+  inset:0;
+  z-index:200;
+  background:rgba(0,0,0,0.2);
+  backdrop-filter: blur(4px);
+  display:none;
+  opacity:0;
+  transition:opacity .4s var(--ease);
+}
+.menu-overlay.active{display:block;opacity:1}
+.menu-sidebar{
+  position:fixed;
+  top:0;
+  left:-100%;
+  width:100%;
+  max-width:100vw;
+  height:100dvh;
+  z-index:201;
+  background: var(--glossy-bg);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  color: #fff;
+  transition:left .5s var(--ease);
+  display:flex;
+  flex-direction:column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  border-right: 1px solid rgba(255,255,255,0.15);
+}
+.menu-sidebar.active{left:0}
+.menu-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:24px 32px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+.menu-header h3{
+  font-size:14px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:#fff;
+  font-weight:400;
+  text-shadow:0 2px 5px rgba(0,0,0,0.3);
+}
+.menu-close{
+  color:#fff;
+  font-size:12px;
+  padding:10px 20px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+  border-radius:40px;
+  letter-spacing:.1em;
+  transition:all .2s;
+  border:1px solid rgba(255,255,255,0.15);
+}
+.menu-close:hover{
+  background:rgba(255,255,255,0.2);
+}
+.menu-body{
+  flex:1;
+  overflow-y:auto;
+  padding:40px 32px;
+  display:flex;
+  flex-direction:column;
+}
+.menu-item{
+  padding:20px 0;
+  color:rgba(255,255,255,0.9);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  font-size:12px;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  transition:color .2s, padding-left .2s;
+  cursor:pointer;
+  font-weight:300;
+}
+.menu-item:hover{
+  color:#fff;
+  padding-left:16px;
+}
+.menu-divider{
+  border-top:1px solid rgba(255,255,255,0.2);
+  margin:30px 0;
+}
+/* mobile search inside menu (formerly in header) */
+.mobile-search-item{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding:20px 0;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  color:rgba(255,255,255,0.9);
+  font-size:12px;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:color .2s, padding-left .2s;
+}
+.mobile-search-item:hover{
+  color:#fff;
+  padding-left:16px;
+}
+.mobile-search-icon{
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+/* SEARCH OVERLAY (keep consistent gloss) */
+.search-overlay{
+  position:fixed;
+  inset:0;
+  z-index:200;
+  background:rgba(0,0,0,0.75);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  padding-top:20vh;
+  opacity:0;
+  transition:opacity .3s var(--ease);
+}
+.search-overlay.active{
+  display:flex;
+  opacity:1;
+}
+.search-close{
+  position:absolute;
+  top:24px;
+  right:28px;
+  color:#fff;
+  font-size:28px;
+  width:52px;
+  height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:rgba(255,255,255,0.1);
+  transition:all .2s;
+}
+.search-close:hover{
+  background:rgba(255,255,255,0.2);
+  transform:scale(1.05);
+}
+.search-input-wrapper{
+  width:90%;
+  max-width:650px;
+  position:relative;
+  margin-bottom:30px;
+}
+.search-input-wrapper input{
+  background:transparent;
+  border:none;
+  border-bottom:2px solid rgba(255,255,255,0.3);
+  color:#fff;
+  font-size:36px;
+  font-weight:300;
+  letter-spacing:.02em;
+  width:100%;
+  padding:20px 0 12px;
+  outline:none;
+  text-align:left;
+}
+.search-input-wrapper input::placeholder{
+  color:rgba(255,255,255,0.25);
+  font-size:28px;
+}
+.search-input-wrapper .search-icon{
+  position:absolute;
+  right:0;
+  bottom:22px;
+  color:rgba(255,255,255,0.5);
+  font-size:28px;
+}
+.search-results{
+  width:90%;
+  max-width:650px;
+  color:#fff;
+  font-size:18px;
+  max-height:350px;
+  overflow-y:auto;
+  padding:12px 0;
+}
+.search-result-item{
+  padding:16px 0;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  cursor:pointer;
+  transition:padding-left .2s, background .2s;
+  font-size:16px;
+  letter-spacing:.04em;
+}
+.search-result-item:hover{
+  padding-left:16px;
+  background:rgba(255,255,255,0.05);
+}
+.no-results{
+  padding:30px 0;
+  color:rgba(255,255,255,0.5);
+  text-align:center;
+  font-size:18px;
+}
+
+/* ===== GLOSSY BAG SIDEBAR — with quantity controls ===== */
+.bag-overlay{
+  position:fixed;
+  inset:0;
+  z-index:200;
+  background:rgba(0,0,0,0.25);
+  backdrop-filter: blur(6px);
+  display:none;
+  opacity:0;
+  transition:opacity .4s var(--ease)
+}
+.bag-overlay.active{display:block;opacity:1}
+.bag-sidebar{
+  position:fixed;
+  top:0;
+  right:-420px;
+  width:420px;
+  max-width:100vw;
+  height:100dvh;
+  z-index:201;
+  background: var(--glossy-bg);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border-left: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  transition:right .5s var(--ease);
+  display:flex;
+  flex-direction:column;
+  box-shadow: -4px 0 40px rgba(0,0,0,0.6);
+}
+.bag-sidebar.active{right:0}
+.bag-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:20px 24px;
+  border-bottom:1px solid rgba(255,255,255,0.15);
+}
+.bag-header h3{font-size:13px;letter-spacing:.12em;text-transform:uppercase; color:#fff; text-shadow:0 2px 4px #00000040;}
+.bag-close{
+  color:#fff;
+  font-size:12px;
+  padding:8px 16px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+  border-radius:30px;
+  border:1px solid rgba(255,255,255,0.15);
+}
+.bag-body{
+  flex:1;
+  overflow-y:auto;
+  padding:24px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+.bag-empty{
+  text-align:center;
+  color:rgba(255,255,255,0.8);
+  font-size:13px;
+  letter-spacing:.04em;
+  margin: auto;
+}
+.bag-footer{
+  padding:20px 24px;
+  border-top:1px solid rgba(255,255,255,0.15);
+}
+.bag-item{
+  display:flex;
+  gap:16px;
+  padding:16px 0;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  width:100%;
+  color:#fff;
+  align-items: flex-start;
+}
+.bag-item img{
+  width:80px;
+  height:100px;
+  object-fit:cover;
+  border-radius:4px;
+  flex-shrink:0;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+.bag-item-info{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+.bag-item-title{
+  font-size:11px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  font-weight:400;
+  word-break:break-word;
+}
+.bag-item-price{
+  font-size:11px;
+  letter-spacing:.1em;
+  color:rgba(255,255,255,0.8);
+}
+/* quantity controls */
+.bag-quantity{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:6px;
+}
+.bag-qty-btn{
+  background:rgba(255,255,255,0.1);
+  border:1px solid rgba(255,255,255,0.25);
+  color:#fff;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  font-weight:300;
+  transition:all .2s;
+}
+.bag-qty-btn:hover{
+  background:rgba(255,255,255,0.3);
+  border-color:#fff;
+}
+.bag-qty-num{
+  font-size:12px;
+  min-width:18px;
+  text-align:center;
+}
+.bag-item-remove{
+  font-size:10px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.6);
+  cursor:pointer;
+  margin-top:6px;
+  align-self:flex-start;
+  border-bottom:1px dotted transparent;
+}
+.bag-item-remove:hover{
+  color:#fff;
+  border-bottom-color:#fff;
+}
+.bag-count{
+  background:#fff;
+  color:#000;
+  font-size:9px;
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-left:4px;
+  vertical-align:middle
+}
+
+/* HERO CAROUSEL, PRODUCTS, BOTTOM CAROUSEL — unchanged except currency symbols */
+.hero{
+  position:relative;
+  width:100%;
+  height:100dvh;
+  overflow:hidden;
+}
+.hero-container {
+  display:flex;
+  width:100%;
+  height:100%;
+  transition:transform 0.6s var(--ease);
+}
+.hero-slide{
+  flex: 0 0 100%;
+  height:100%;
+  position:relative;
+}
+.hero-slide img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.hero-text{
+  position:absolute;
+  bottom:32px;
+  left:0;
+  right:0;
+  text-align:center;
+  z-index:10;
+  color:#fff;
+  letter-spacing:.2em;
+  text-shadow:0 2px 10px rgba(0,0,0,0.3);
+}
+.hero-dots{
+  position:absolute;
+  bottom:32px;
+  left:16px;
+  z-index:10;
+  display:flex;
+  gap:8px;
+  margin-bottom: 5px;
+}
+.hero-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:rgba(255,255,255,.4);
+  border:none;
+  transition:background .3s;
+}
+.hero-dot.active{
+  background:#fff;
+}
+.hero-pause{
+  position:absolute;
+  bottom:32px;
+  right:16px;
+  z-index:10;
+  width:40px;
+  height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:rgba(0,0,0,.3);
+  color:#fff;
+  border:1px solid rgba(255,255,255,0.2);
+  transition:all .3s;
+  transform: translateY(25%);
+}
+.hero-pause:hover{
+  background:#fff;
+  color:#000;
+}
+/* pause toggle icon spacing */
+.hero-pause i {
+  font-size: 18px;
+}
+.products{
+  width:100%;
+  background:var(--bg);
+}
+.products-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:0;
+}
+.product-card{
+  position:relative;
+  overflow:hidden;
+  cursor:pointer;
+}
+.product-card img{
+  width:100%;
+  aspect-ratio:3/4;
+  object-fit:cover;
+  display:block;
+  background:#f0f0f0;
+}
+.product-info{
+  padding:12px 24px;
+  background:var(--bg);
+  transition:transform .7s var(--ease);
+}
+.product-info h4{
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  font-weight:400;
+  margin-bottom:8px;
+}
+.product-info span{
+  font-size:11px;
+  letter-spacing:.12em;
+}
+.product-add{
+  position:absolute;
+  bottom:-48px;
+  left:0;
+  right:0;
+  transition:transform .7s var(--ease);
+}
+.product-card:hover .product-info{
+  transform:translateY(-48px);
+}
+.product-card:hover .product-add{
+  transform:translateY(-48px);
+}
+.product-soldout{
+  position:absolute;
+  top:16px;
+  left:16px;
+  z-index:10;
+  background:rgba(138,138,138,.8);
+  padding:4px 8px;
+  color:#fff;
+}
+.product-mobile-add{
+  display:none;
+  position:absolute;
+  bottom:16px;
+  right:16px;
+  z-index:10;
+  width:24px;
+  height:24px;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,.25);
+  color:#fff;
+  border:none;
+  font-size:16px;
+}
+.bottom-carousel{
+  position:relative;
+  width:100%;
+  height:100dvh;
+  overflow:hidden;
+}
+.bottom-container {
+  display:flex;
+  width:100%;
+  height:100%;
+  transition:transform 0.6s var(--ease);
+}
+.bottom-slide{
+  flex: 0 0 100%;
+  height:100%;
+}
+.bottom-slide img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.carousel-arrow{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:20;
+  width:56px;
+  height:56px;
+  border-radius:50%;
+  background:rgba(0,0,0,0.3);
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,0.25);
+  color:#fff;
+  font-size:32px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:all 0.3s;
+}
+.carousel-arrow:hover{
+  background:rgba(255,255,255,0.9);
+  color:#000;
+}
+.carousel-arrow.left{
+  left:28px;
+}
+.carousel-arrow.right{
+  right:28px;
+}
+.bottom-dots{
+  position:absolute;
+  bottom:28px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:20;
+  display:flex;
+  gap:12px;
+}
+.bottom-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.5);
+  border:none;
+  transition:all 0.3s;
+  cursor:pointer;
+}
+.bottom-dot.active{
+  background:#fff;
+  transform:scale(1.3);
+}
+.footer{
+  background:var(--primary);
+  color:var(--primary-fg);
+  padding:48px 16px 32px;
+}
+.footer-inner{
+  max-width:1440px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr;
+  gap:32px;
+}
+.footer h3{
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  margin-bottom:16px;
+}
+.footer p{
+  font-size:12px;
+  color:rgba(255,255,255,.6);
+  line-height:1.6;
+  max-width:400px;
+}
+.footer ul{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.footer ul a{
+  font-size:12px;
+  color:rgba(255,255,255,.6);
+  transition:color .3s;
+}
+.footer ul a:hover{
+  color:#fff;
+}
+.footer-input{
+  display:flex;
+  border-bottom:1px solid rgba(255,255,255,.4);
+  max-width:350px;
+  margin-top:16px;
+}
+.footer-input input{
+  background:transparent;
+  border:none;
+  color:#fff;
+  padding:12px 0;
+  flex:1;
+  outline:none;
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.footer-input input::placeholder{
+  color:rgba(255,255,255,.4);
+}
+.footer-input button{
+  color:#fff;
+  padding:0 8px;
+  font-size:16px;
+}
+.footer-bottom{
+  max-width:1440px;
+  margin:48px auto 0;
+  padding-top:24px;
+  border-top:1px solid rgba(255,255,255,.2);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.footer-bottom a,.footer-bottom span{
+  font-size:12px;
+  color:rgba(255,255,255,.4);
+  transition:color .3s;
+}
+.footer-bottom a:hover{
+  color:#fff;
+}
+.footer-socials{
+  display:flex;
+  gap:24px;
+}
+
+/* RESPONSIVE */
+@media(max-width:1023px){
+  .nav-left .nav-link:not(.mobile-menu-btn), 
+  .nav-right .desktop-only,
+  .nav-right .nav-link:first-child .desktop-only {
+    display: none;
+  }
+  .mobile-menu-btn{
+    display: block;
+  }
+  .nav-left{
+    flex:1;
+    justify-content:flex-start;
+  }
+  .nav-right{
+    flex:1;
+    justify-content:flex-end;
+  }
+  .header .logo svg{
+    width:110px;
+  }
+}
+@media(max-width:765px){
+  .bag-sidebar{
+    width:100vw;
+    right:-100vw;
+  }
+  .search-input-wrapper input{
+    font-size:24px;
+  }
+  .search-input-wrapper input::placeholder{
+    font-size:18px;
+  }
+  .carousel-arrow{
+    width:44px;
+    height:44px;
+    font-size:24px;
+  }
+  .carousel-arrow.left{
+    left:12px;
+  }
+  .carousel-arrow.right{
+    right:12px;
+  }
+}
+@media(min-width:768px) and (max-width:1023px){
+  .products-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+@media(max-width:767px){
+  .products-grid{
+    grid-template-columns:1fr;
+  }
+  .product-card:hover .product-info,
+  .product-card:hover .product-add{
+    transform:none;
+  }
+  .product-mobile-add{
+    display:flex;
+  }
+  .footer-inner{
+    grid-template-columns:1fr;
+  }
+  .footer-bottom{
+    flex-direction:column;
+    gap:16px;
+    align-items:flex-start;
+  }
+.bag{
+  padding: 0;
+}
+}
+</style>
+</head>
+<body>
+<!-- HEADER -->
+<header class="header" id="mainHeader">
+  <div class="header-inner">
+    <nav class="nav-left">
+      <a href="#shop" class="nav-link btn-text">Shop All</a>
+      <button class="mobile-menu-btn btn-text" onclick="openMenu()">Menu</button>
+    </nav>
+    
+    <!-- Logo container with explicit centering -->
+    <div style="position: absolute; left: 50%; top: 50%; transform: translate(-42%, -50%);">
+      <a href="/" class="logo" style="position: static; transform: none; margin: 0;">
+        <svg viewBox="0 0 200 28" width="120" height="auto">
+          <text x="0" y="22" font-family="Inter" font-weight="400" font-size="26" letter-spacing="8" text-transform="uppercase" fill="currentColor">DIGINESS</text>
+        </svg>
+      </a>
+    </div>
+    
+    <nav class="nav-right">
+      <button class="nav-link btn-text desktop-only" onclick="openSearch()">Search</button>
+      <a href="#about" class="nav-link btn-text desktop-only">About</a>
+      <a href="#account" class="nav-link btn-text desktop-only">Account</a>
+      <button class="nav-link btn-text bag" onclick="openBag()">Bag <span class="bag-count" id="bagCount">0</span></button>
+    </nav>
+  </div>
+</header>
+<!-- FULL WIDTH LEFT MENU (glossier) — with mobile search option added -->
+<div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+<div class="menu-sidebar" id="menuSidebar">
+  <div class="menu-header">
+    <h3>DIGINESS</h3>
+    <button class="menu-close btn-text" onclick="closeMenu()">Close</button>
+  </div>
+  <div class="menu-body">
+    <!-- Mobile search moved here from header -->
+    <div class="mobile-search-item" onclick="openSearch(); closeMenu();">
+      <span>Search</span>
+      <span class="mobile-search-icon">⌕</span>
+    </div>
+    <a href="#shop" class="menu-item" onclick="closeMenu()">Shop All</a>
+    <a href="#" class="menu-item" onclick="closeMenu()">Smart Watch Pro</a>
+    <a href="#" class="menu-item" onclick="closeMenu()">Wireless Earbuds X1</a>
+    <a href="#" class="menu-item" onclick="closeMenu()">Mini Drone Cam</a>
+    <div class="menu-divider"></div>
+    <a href="#about" class="menu-item" onclick="closeMenu()">About</a>
+    <a href="#account" class="menu-item" onclick="closeMenu()">Account</a>
+    <a href="#" class="menu-item" onclick="closeMenu()">Shipping & Returns</a>
+  </div>
+</div>
+
+<!-- SEARCH OVERLAY -->
+<div class="search-overlay" id="searchOverlay">
+  <button class="search-close" onclick="closeSearch()">✕</button>
+  <div class="search-input-wrapper">
+    <input type="text" placeholder="Search smart gadgets..." id="searchInput" oninput="handleSearch()">
+    <span class="search-icon">⌕</span>
+  </div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
+<!-- BAG SIDEBAR — GLOSSY + QUANTITY CONTROLS -->
+<div class="bag-overlay" id="bagOverlay" onclick="closeBag()"></div>
+<div class="bag-sidebar" id="bagSidebar">
+  <div class="bag-header">
+    <h3>Your Bag</h3>
+    <button class="bag-close btn-text" onclick="closeBag()">Close</button>
+  </div>
+  <div class="bag-body" id="bagBody">
+    <div class="bag-empty">Your bag is empty</div>
+  </div>
+  <div class="bag-footer">
+    <button class="btn-primary" style="background:#fff; color:#000;" onclick="alert('Checkout coming soon!')">Checkout</button>
+  </div>
+</div>
+
+<!-- HERO CAROUSEL -->
+<section class="hero" id="heroCarousel">
+  <div class="hero-container" id="heroContainer">
+    <div class="hero-slide"><img src="1.png"></div>
+    <div class="hero-slide"><img src="2.png"></div>
+    <div class="hero-slide"><img src="3.png"></div>
+  </div>
+  <div class="hero-text btn-text">Experience Innovation</div>
+  <div class="hero-dots" id="heroDots">
+    <button class="hero-dot active" onclick="goToHeroSlide(0)"></button>
+    <button class="hero-dot" onclick="goToHeroSlide(1)"></button>
+    <button class="hero-dot" onclick="goToHeroSlide(2)"></button>
+  </div>
+  <!-- pause button with Font Awesome icons: pause / play -->
+  <button class="hero-pause" onclick="togglePause()" id="pauseBtn">
+    <i class="fa-solid fa-pause"></i>
+  </button>
+</section>
+
+<!-- PRODUCTS GRID — INDIAN RUPEES -->
+<section class="products" id="shop">
+  <div class="products-grid">
+    <!-- Product 1: Smart Watch Pro (correct) -->
+    <div class="product-card" data-name="Smart Watch Pro" data-price="₹16,999" data-img="https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?w=600&h=800&fit=crop">
+      <img src="https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?w=600&h=800&fit=crop" alt="Smart Watch Pro" loading="lazy">
+      <button class="product-mobile-add" onclick="addToBag('Smart Watch Pro','₹16,999','https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?w=600&h=800&fit=crop')">+</button>
+      <div class="product-info"><h4>Smart Watch Pro</h4><span>₹16,999</span></div>
+      <div class="product-add"><button class="btn-primary" onclick="addToBag('Smart Watch Pro','₹16,999','https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?w=600&h=800&fit=crop')">Add to bag</button></div>
+    </div>
+
+    <!-- Product 2: Wireless Earbuds X1 (FIXED: unclosed div, wrong data/product calls) -->
+    <div class="product-card" data-name="Wireless Earbuds X1" data-price="₹9,999" data-img="https://images.pexels.com/photos/3780681/pexels-photo-3780681.jpeg?w=600&h=800&fit=crop">
+      <img src="https://images.pexels.com/photos/3780681/pexels-photo-3780681.jpeg?w=600&h=800&fit=crop" alt="Wireless Earbuds X1" loading="lazy">
+      <button class="product-mobile-add" onclick="addToBag('Wireless Earbuds X1','₹9,999','https://images.pexels.com/photos/3780681/pexels-photo-3780681.jpeg?w=600&h=800&fit=crop')">+</button>
+      <div class="product-info"><h4>Wireless Earbuds X1</h4><span>₹9,999</span></div>
+      <div class="product-add"><button class="btn-primary" onclick="addToBag('Wireless Earbuds X1','₹9,999','https://images.pexels.com/photos/3780681/pexels-photo-3780681.jpeg?w=600&h=800&fit=crop')">Add to bag</button></div>
+    </div>
+
+    <!-- Product 3: Mini Drone Cam (correct) -->
+    <div class="product-card" data-name="Mini Drone Cam" data-price="₹21,499" data-img="https://tse2.mm.bing.net/th/id/OIP.epF6Hxs9i497obQQBjvqBAHaHa?rs=1&pid=ImgDetMain&o=7&rm=3">
+      <img src="https://tse2.mm.bing.net/th/id/OIP.epF6Hxs9i497obQQBjvqBAHaHa?rs=1&pid=ImgDetMain&o=7&rm=3" alt="Mini Drone Cam" loading="lazy">
+      <button class="product-mobile-add" onclick="addToBag('Mini Drone Cam','₹21,499','https://tse2.mm.bing.net/th/id/OIP.epF6Hxs9i497obQQBjvqBAHaHa?rs=1&pid=ImgDetMain&o=7&rm=3')">+</button>
+      <div class="product-info"><h4>Mini Drone Cam</h4><span>₹21,499</span></div>
+      <div class="product-add"><button class="btn-primary" onclick="addToBag('Mini Drone Cam','₹21,499','https://tse2.mm.bing.net/th/id/OIP.epF6Hxs9i497obQQBjvqBAHaHa?rs=1&pid=ImgDetMain&o=7&rm=3')">Add to bag</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- BOTTOM CAROUSEL -->
+<section class="bottom-carousel" id="bottomCarousel">
+  <div class="bottom-container" id="bottomContainer">
+    <div class="bottom-slide"><img src="https://images.pexels.com/photos/1229861/pexels-photo-1229861.jpeg?w=1920&h=1080&fit=crop" alt="Tech lifestyle"></div>
+    <div class="bottom-slide"><img src="https://images.pexels.com/photos/205421/pexels-photo-205421.jpeg?w=1920&h=1080&fit=crop" alt="Smart home"></div>
+    <div class="bottom-slide"><img src="https://images.pexels.com/photos/2582937/pexels-photo-2582937.jpeg?w=1920&h=1080&fit=crop" alt="Gadget setup"></div>
+    <div class="bottom-slide"><img src="https://images.pexels.com/photos/1266285/pexels-photo-1266285.jpeg?w=1920&h=1080&fit=crop" alt="Innovation"></div>
+  </div>
+  <button class="carousel-arrow left" onclick="prevBottomSlide()">‹</button>
+  <button class="carousel-arrow right" onclick="nextBottomSlide()">›</button>
+  <div class="bottom-dots" id="bottomDots">
+    <button class="bottom-dot active" onclick="goToBottomSlide(0)"></button>
+    <button class="bottom-dot" onclick="goToBottomSlide(1)"></button>
+    <button class="bottom-dot" onclick="goToBottomSlide(2)"></button>
+    <button class="bottom-dot" onclick="goToBottomSlide(3)"></button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer" id="about">
+  <div class="footer-inner">
+    <div><h3>Stay Connected</h3><p>Sign up for exclusive access to new gadgets, special offers, and stories from the world of Diginess.</p><div class="footer-input"><input type="email" placeholder="Email address"><button>→</button></div></div>
+    <div><h3>Shop</h3><ul><li><a href="#">Smart Watch Pro</a></li><li><a href="#">Wireless Earbuds X1</a></li><li><a href="#">Mini Drone Cam</a></li><li><a href="#shop">Shop All</a></li></ul></div>
+    <div><h3>Info</h3><ul><li><a href="#">Our Approach</a></li><li><a href="#">Contact</a></li><li><a href="#">Shipping & Returns</a></li><li><a href="#">Privacy Policy</a></li><li><a href="#">Terms of Service</a></li></ul></div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-socials"><a href="#">Instagram</a><a href="#">TikTok</a><a href="#">YouTube</a></div>
+    <span>© 2026 Diginess. All rights reserved.</span>
+  </div>
+</footer>
+
+<script>
+// ================= HEADER GLASS =================
+const header = document.getElementById('mainHeader');
+window.addEventListener('scroll', () => {
+  header.classList.toggle('glass', window.scrollY > 300);
+});
+
+// ================= MENU =================
+function openMenu() {
+  document.getElementById('menuOverlay').classList.add('active');
+  document.getElementById('menuSidebar').classList.add('active');
+}
+function closeMenu() {
+  document.getElementById('menuOverlay').classList.remove('active');
+  document.getElementById('menuSidebar').classList.remove('active');
+}
+
+// ================= SEARCH =================
+const allProducts = ['Smart Watch Pro', 'Wireless Earbuds X1', 'Mini Drone Cam', 'Smart Speaker', 'Fitness Tracker', 'VR Headset'];
+
+function openSearch() {
+  document.getElementById('searchOverlay').classList.add('active');
+  setTimeout(() => document.getElementById('searchInput').focus(), 100);
+}
+function closeSearch() {
+  document.getElementById('searchOverlay').classList.remove('active');
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchResults').innerHTML = '';
+}
+function handleSearch() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const res = document.getElementById('searchResults');
+  if (!q) { res.innerHTML = ''; return; }
+  const matches = allProducts.filter(p => p.toLowerCase().includes(q));
+  if (matches.length) {
+    res.innerHTML = matches.map(m =>
+      `<div class="search-result-item" onclick="selectSearchItem('${m}')">${m}</div>`
+    ).join('');
+  } else {
+    res.innerHTML = '<div class="no-results">No products found</div>';
+  }
+}
+function selectSearchItem(item) {
+  alert(`You selected: ${item}`);
+  closeSearch();
+}
+
+// ================= BAG with quantity (no auto‑open cart) =================
+let bag = []; // each item: { name, price, img, quantity }
+
+function updateBagUI() {
+  const count = document.getElementById('bagCount');
+  const body = document.getElementById('bagBody');
+  const totalItems = bag.reduce((sum, i) => sum + i.quantity, 0);
+  count.textContent = totalItems;
+
+  if (bag.length === 0) {
+    body.innerHTML = '<div class="bag-empty">Your bag is empty</div>';
+    return;
+  }
+
+  body.innerHTML = '';
+  bag.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'bag-item';
+    div.innerHTML = `
+      <img src="${item.img}" alt="${item.name}">
+      <div class="bag-item-info">
+        <span class="bag-item-title">${item.name}</span>
+        <span class="bag-item-price">${item.price}</span>
+        <div class="bag-quantity">
+          <button class="bag-qty-btn" onclick="changeQty(${idx}, -1)">−</button>
+          <span class="bag-qty-num">${item.quantity}</span>
+          <button class="bag-qty-btn" onclick="changeQty(${idx}, 1)">+</button>
+        </div>
+        <span class="bag-item-remove" onclick="removeFromBag(${idx})">Remove</span>
+      </div>`;
+    body.appendChild(div);
+  });
+}
+
+function changeQty(index, delta) {
+  const newQty = bag[index].quantity + delta;
+  if (newQty < 1) {
+    removeFromBag(index);
+  } else {
+    bag[index].quantity = newQty;
+    updateBagUI();
+  }
+}
+
+function removeFromBag(index) {
+  bag.splice(index, 1);
+  updateBagUI();
+}
+
+function addToBag(name, price, img) {
+  const existing = bag.find(item => item.name === name);
+  if (existing) {
+    existing.quantity += 1;
+  } else {
+    bag.push({ name, price, img, quantity: 1 });
+  }
+  updateBagUI();
+  // do NOT open bag automatically
+}
+
+function openBag() {
+  document.getElementById('bagOverlay').classList.add('active');
+  document.getElementById('bagSidebar').classList.add('active');
+}
+function closeBag() {
+  document.getElementById('bagOverlay').classList.remove('active');
+  document.getElementById('bagSidebar').classList.remove('active');
+}
+updateBagUI();
+
+// =============== HERO CAROUSEL =====================
+const heroContainer = document.getElementById('heroContainer');
+const heroSlides = document.querySelectorAll('#heroCarousel .hero-slide');
+const heroDots = document.querySelectorAll('#heroCarousel .hero-dot');
+const pauseBtn = document.getElementById('pauseBtn');
+
+let heroIndex = 1;
+let heroInterval;
+const heroTotal = heroSlides.length;
+
+const heroFirst = heroSlides[0].cloneNode(true);
+const heroLast = heroSlides[heroTotal - 1].cloneNode(true);
+heroContainer.appendChild(heroFirst);
+heroContainer.insertBefore(heroLast, heroSlides[0]);
+heroContainer.style.transform = 'translateX(-100%)';
+
+function updateHeroDots() {
+  heroDots.forEach(dot => dot.classList.remove('active'));
+  heroDots[(heroIndex - 1) % heroTotal].classList.add('active');
+}
+
+function moveHero() {
+  heroIndex++;
+  heroContainer.style.transition = 'transform 0.6s ease';
+  heroContainer.style.transform = `translateX(-${heroIndex * 100}%)`;
+  if (heroIndex === heroTotal + 1) {
+    setTimeout(() => {
+      heroContainer.style.transition = 'none';
+      heroIndex = 1;
+      heroContainer.style.transform = 'translateX(-100%)';
+    }, 600);
+  }
+  updateHeroDots();
+}
+function goToHeroSlide(n) {
+  heroIndex = n + 1;
+  heroContainer.style.transition = 'transform 0.6s ease';
+  heroContainer.style.transform = `translateX(-${heroIndex * 100}%)`;
+  updateHeroDots();
+}
+heroInterval = setInterval(moveHero, 4000);
+
+// =============== BOTTOM CAROUSEL ==================
+const bottomContainer = document.getElementById('bottomContainer');
+const bottomSlides = document.querySelectorAll('#bottomCarousel .bottom-slide');
+const bottomDots = document.querySelectorAll('#bottomDots .bottom-dot');
+
+let bottomIndex = 1;
+let bottomInterval;
+const bottomTotal = bottomSlides.length;
+
+const bottomFirst = bottomSlides[0].cloneNode(true);
+const bottomLast = bottomSlides[bottomTotal - 1].cloneNode(true);
+bottomContainer.appendChild(bottomFirst);
+bottomContainer.insertBefore(bottomLast, bottomSlides[0]);
+bottomContainer.style.transform = 'translateX(-100%)';
+
+function updateBottomDots() {
+  bottomDots.forEach(dot => dot.classList.remove('active'));
+  bottomDots[(bottomIndex - 1) % bottomTotal].classList.add('active');
+}
+
+function moveBottom() {
+  bottomIndex++;
+  bottomContainer.style.transition = 'transform 0.6s ease';
+  bottomContainer.style.transform = `translateX(-${bottomIndex * 100}%)`;
+  if (bottomIndex === bottomTotal + 1) {
+    setTimeout(() => {
+      bottomContainer.style.transition = 'none';
+      bottomIndex = 1;
+      bottomContainer.style.transform = 'translateX(-100%)';
+    }, 600);
+  }
+  updateBottomDots();
+}
+function nextBottomSlide() { moveBottom(); }
+function prevBottomSlide() {
+  bottomIndex--;
+  bottomContainer.style.transition = 'transform 0.6s ease';
+  bottomContainer.style.transform = `translateX(-${bottomIndex * 100}%)`;
+  if (bottomIndex === 0) {
+    setTimeout(() => {
+      bottomContainer.style.transition = 'none';
+      bottomIndex = bottomTotal;
+      bottomContainer.style.transform = `translateX(-${bottomTotal * 100}%)`;
+    }, 600);
+  }
+  updateBottomDots();
+}
+function goToBottomSlide(n) {
+  bottomIndex = n + 1;
+  bottomContainer.style.transition = 'transform 0.6s ease';
+  bottomContainer.style.transform = `translateX(-${bottomIndex * 100}%)`;
+  updateBottomDots();
+}
+bottomInterval = setInterval(moveBottom, 5000);
+
+// ================= ESC CLOSE =================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeSearch();
+    closeBag();
+    closeMenu();
+  }
+});
+
+// pause toggle using Font Awesome icons
+function togglePause() {
+  if (heroInterval) {
+    clearInterval(heroInterval);
+    heroInterval = null;
+    pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  } else {
+    heroInterval = setInterval(moveHero, 4000);
+    pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+  }
+}
+</script>
+</body>
+</html>

@@ -775,7 +775,7 @@
         },
         {
           "icon": "fas fa-forward",
-          "text": "New Button",
+          "text": "Forward",
           "entityType": "media_player",
           "textColor": "#000000",
           "bgColor": "#ffffff",
